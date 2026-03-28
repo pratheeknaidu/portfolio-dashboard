@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:emulator": "concurrently \"firebase emulators:start\" \"wait-on http://localhost:8080 && next dev\"",
+    "dev:emulator": "concurrently \"firebase emulators:start\" \"wait-on tcp:localhost:8080 && next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
