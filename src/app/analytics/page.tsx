@@ -25,7 +25,7 @@ export default function AnalyticsPage() {
 
     if (holdings.length > 0) {
       const tickers = holdings.map((h) => h.ticker).join(",");
-      const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`);
+      const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`, { headers });
       const quotes: Record<string, Quote> = await quotesRes.json();
 
       setItems(

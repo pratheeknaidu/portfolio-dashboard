@@ -11,10 +11,10 @@ export function clearCache() {
 function rangeToDate(range: TimeRange): Date {
   const now = new Date();
   switch (range) {
-    case "1W": return new Date(now.setDate(now.getDate() - 7));
-    case "1M": return new Date(now.setMonth(now.getMonth() - 1));
+    case "1W": { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
+    case "1M": { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d; }
     case "YTD": return new Date(now.getFullYear(), 0, 1);
-    default: return new Date(now.setDate(now.getDate() - 1));
+    default: { const d = new Date(now); d.setDate(d.getDate() - 1); return d; }
   }
 }
 

@@ -39,7 +39,12 @@ export function Treemap({ items, onHover }: Props) {
         outerPadding={4}
         colors={(node) => node.data.color}
         borderWidth={0}
-        label={(node) => `${node.id}\n${node.data.changePercent >= 0 ? "+" : ""}${node.data.changePercent.toFixed(1)}%`}
+        label={(node) => {
+          const item = items.find(i => i.ticker === node.id);
+          const pct = item?.quote.changePercent?.toFixed(1) ?? "0.0";
+          const price = item?.quote.price?.toFixed(2) ?? "";
+          return `${node.id}\n${Number(pct) >= 0 ? "+" : ""}${pct}%\n$${price}`;
+        }}
         labelSkipSize={40}
         labelTextColor="#ffffff"
         onMouseEnter={(node) => onHover(node.data.item)}

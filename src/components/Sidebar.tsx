@@ -17,6 +17,9 @@ export function Sidebar({ items }: Props) {
   const totalValue = items.reduce((sum, i) => sum + i.marketValue, 0);
   const todayChange = items.reduce((sum, i) => sum + i.quote.change * i.shares, 0);
   const allTimeReturn = items.reduce((sum, i) => sum + i.totalPL, 0);
+  const totalCostBasis = items.reduce((sum, i) => sum + i.shares * i.avgCost, 0);
+  const todayChangePct = totalValue - todayChange !== 0 ? (todayChange / (totalValue - todayChange)) * 100 : 0;
+  const allTimeReturnPct = totalCostBasis !== 0 ? (allTimeReturn / totalCostBasis) * 100 : 0;
 
   // Top 3 movers by absolute changePercent
   const topMovers = [...items]
@@ -45,7 +48,7 @@ export function Sidebar({ items }: Props) {
       <div className="mb-2">
         <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Today&apos;s Change</div>
         <div className={`font-semibold ${todayChange >= 0 ? "text-gain" : "text-loss"}`}>
-          {fmtSigned(todayChange)}
+          {fmtSigned(todayChange)} ({todayChangePct >= 0 ? "+" : ""}{todayChangePct.toFixed(2)}%)
         </div>
       </div>
 
@@ -53,7 +56,7 @@ export function Sidebar({ items }: Props) {
       <div className="mb-4">
         <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">All-Time Return</div>
         <div className={`font-semibold ${allTimeReturn >= 0 ? "text-gain" : "text-loss"}`}>
-          {fmtSigned(allTimeReturn)}
+          {fmtSigned(allTimeReturn)} ({allTimeReturnPct >= 0 ? "+" : ""}{allTimeReturnPct.toFixed(2)}%)
         </div>
       </div>
 

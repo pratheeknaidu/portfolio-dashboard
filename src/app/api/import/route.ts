@@ -51,10 +51,9 @@ export async function POST(req: NextRequest) {
 
     const existing = await holdingsRef.doc(ticker).get();
 
-    await holdingsRef.doc(ticker).set(
-      { ticker, companyName, sector, shares, avgCost, addedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    const payload: Record<string, unknown> = { ticker, companyName, sector, shares, avgCost };
+    if (!existing.exists) payload.addedAt = new Date().toISOString();
+    await holdingsRef.doc(ticker).set(payload, { merge: true });
 
     if (existing.exists) {
       updated.push(ticker);

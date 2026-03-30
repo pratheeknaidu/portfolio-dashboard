@@ -29,7 +29,7 @@ export default function DashboardPage() {
     if (holdings.length === 0) { setItems([]); return; }
 
     const tickers = holdings.map((h) => h.ticker).join(",");
-    const quotesRes = await fetch(`/api/quotes?tickers=${tickers}&range=${range}`);
+    const quotesRes = await fetch(`/api/quotes?tickers=${tickers}&range=${range}`, { headers });
     const quotes: Record<string, Quote> = await quotesRes.json();
 
     const merged: PortfolioItem[] = holdings
