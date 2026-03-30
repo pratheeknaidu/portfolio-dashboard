@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "seed": "ts-node scripts/seed-emulator.ts"
+    "seed": "ts-node scripts/seed-emulator.ts",
+    "test:integration": "firebase emulators:exec \"npx jest --testPathPattern=integration\""
   },
   "dependencies": {
     "@nivo/treemap": "^0.99.0",
