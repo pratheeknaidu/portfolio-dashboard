@@ -6,6 +6,7 @@ import { SectorChart } from "@/components/SectorChart";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
+import { CsvImportModal } from "@/components/CsvImportModal";
 import type { Holding, Quote, PortfolioItem, Snapshot } from "@/types";
 
 export default function AnalyticsPage() {
@@ -86,6 +87,12 @@ export default function AnalyticsPage() {
           </section>
         </main>
       </div>
+      {showImport && (
+        <CsvImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { setShowImport(false); fetchData(); }}
+        />
+      )}
     </AuthGuard>
   );
 }

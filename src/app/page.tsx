@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { TimeRangeToggle } from "@/components/TimeRangeToggle";
 import { useAuth } from "@/lib/auth-context";
 import { isMarketOpen } from "@/lib/market-hours";
+import { CsvImportModal } from "@/components/CsvImportModal";
 import type { Holding, Quote, PortfolioItem, TimeRange } from "@/types";
 
 export default function DashboardPage() {
@@ -85,6 +86,12 @@ export default function DashboardPage() {
           </aside>
         </div>
       </div>
+      {showImport && (
+        <CsvImportModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { setShowImport(false); fetchPortfolio(); }}
+        />
+      )}
     </AuthGuard>
   );
 }
