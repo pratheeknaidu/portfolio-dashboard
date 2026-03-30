@@ -52,4 +52,30 @@ describe("CsvImportModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("triggers onSuccess on partial failure (some imported, some errors)", async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ imported: ["AAPL"], updated: [], errors: ["Unknown ticker: XYZ"] }),
+    });
+
+    render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+
+    const file = new File(["data"], "holdings.csv", { type: "text/csv" });
+    const input = screen.getByLabelText(/choose file/i);
+    await userEvent.upload(input, file);
+
+    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/imported: AAPL/i)).toBeInTheDocument();
+      expect(screen.getByText(/Unknown ticker: XYZ/i)).toBeInTheDocument();
+    });
+
+    jest.runAllTimers();
+    expect(onSuccess).toHaveBeenCalled();
+
+    jest.useRealTimers();
+  });
 });

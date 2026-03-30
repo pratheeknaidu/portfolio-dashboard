@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 
 interface Props {
@@ -16,10 +16,17 @@ interface ImportResult {
 export function CsvImportModal({ onClose, onSuccess }: Props) {
   const { getIdToken } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -41,13 +48,22 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
       const data: ImportResult = await res.json();
       setResult(data);
 
-      if (data.errors.length === 0) {
-        setTimeout(onSuccess, 2000);
+      if (data.imported.length > 0 || data.updated.length > 0) {
+        timerRef.current = setTimeout(onSuccess, 2000);
       }
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResultClose = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (result && (result.imported.length > 0 || result.updated.length > 0)) {
+      onSuccess();
+    } else {
+      onClose();
     }
   };
 
@@ -98,7 +114,7 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
                 {result.errors.map((e, i) => <p key={i}>{e}</p>)}
               </div>
             )}
-            <button onClick={onClose} className="mt-4 px-4 py-2 text-sm bg-surface-border rounded text-white">
+            <button onClick={handleResultClose} className="mt-4 px-4 py-2 text-sm bg-surface-border rounded text-white">
               Close
             </button>
           </div>
