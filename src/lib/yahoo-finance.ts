@@ -1,5 +1,7 @@
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 import type { Quote, TimeRange } from "@/types";
+
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const CACHE_TTL = 60_000; // 60 seconds
 const cache = new Map<string, { data: Record<string, Quote>; timestamp: number }>();
@@ -31,17 +33,24 @@ export async function getQuotes(
 
   const results: Record<string, Quote> = {};
 
-  const quotes = await yahooFinance.quote(tickers);
-  const quotesArray = Array.isArray(quotes) ? quotes : [quotes];
-
-  for (const q of quotesArray) {
-    results[q.symbol] = {
-      price: q.regularMarketPrice,
-      change: q.regularMarketChange ?? 0,
-      changePercent: q.regularMarketChangePercent ?? 0,
-      previousClose: q.regularMarketPreviousClose ?? 0,
-    };
-  }
+  // Fetch each ticker individually to avoid one bad ticker breaking the batch
+  await Promise.allSettled(
+    tickers.map(async (ticker) => {
+      try {
+        const q = await yahooFinance.quote(ticker);
+        if (q && q.regularMarketPrice) {
+          results[q.symbol] = {
+            price: q.regularMarketPrice,
+            change: q.regularMarketChange ?? 0,
+            changePercent: q.regularMarketChangePercent ?? 0,
+            previousClose: q.regularMarketPreviousClose ?? 0,
+          };
+        }
+      } catch {
+        // Skip tickers that fail validation
+      }
+    })
+  );
 
   if (range !== "1D") {
     const startDate = rangeToDate(range);

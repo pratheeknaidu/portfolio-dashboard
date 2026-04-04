@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [range, setRange] = useState<TimeRange>("1D");
   const [hoveredItem, setHoveredItem] = useState<PortfolioItem | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showImport, setShowImport] = useState(false);
 
   const fetchPortfolio = useCallback(async () => {
@@ -25,8 +26,9 @@ export default function DashboardPage() {
     const headers = { Authorization: `Bearer ${token}` };
 
     const holdingsRes = await fetch("/api/portfolio", { headers });
+    if (!holdingsRes.ok) { setItems([]); return; }
     const holdings: Holding[] = await holdingsRes.json();
-    if (holdings.length === 0) { setItems([]); return; }
+    if (!Array.isArray(holdings) || holdings.length === 0) { setItems([]); return; }
 
     const tickers = holdings.map((h) => h.ticker).join(",");
     const quotesRes = await fetch(`/api/quotes?tickers=${tickers}&range=${range}`, { headers });
@@ -71,7 +73,7 @@ export default function DashboardPage() {
       <div className="flex flex-col h-screen">
         <Navbar onImportClick={() => setShowImport(true)} />
         <div className="flex flex-1 overflow-hidden">
-          <main className="flex-1 p-4 relative">
+          <main className="flex-1 p-4 relative" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">Portfolio Heat Map</h2>
               <TimeRangeToggle selected={range} onChange={setRange} />
@@ -79,7 +81,7 @@ export default function DashboardPage() {
             <div className="h-[calc(100%-3rem)]">
               <Treemap items={items} onHover={setHoveredItem} />
             </div>
-            <TreemapTooltip item={hoveredItem} />
+            <TreemapTooltip item={hoveredItem} x={mousePos.x} y={mousePos.y} />
           </main>
           <aside className="w-60 border-l border-surface-border">
             <Sidebar items={items} />

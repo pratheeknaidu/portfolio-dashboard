@@ -6,15 +6,20 @@ function fmt(n: number): string {
 
 interface Props {
   item: PortfolioItem | null;
+  x: number;
+  y: number;
 }
 
-export function TreemapTooltip({ item }: Props) {
+export function TreemapTooltip({ item, x, y }: Props) {
   if (!item) return null;
 
   const dayChange = item.quote.change * item.shares;
 
   return (
-    <div className="absolute z-50 bg-surface-card border border-surface-border rounded-lg p-4 shadow-xl text-sm w-64 pointer-events-none">
+    <div
+      className="fixed z-50 bg-surface-card border border-surface-border rounded-lg p-4 shadow-xl text-sm w-64 pointer-events-none"
+      style={{ left: x + 16, top: y + 16 }}
+    >
       <div className="font-bold text-white text-base">{item.companyName}</div>
       <div className="text-gray-400 mb-2">{item.ticker} &middot; {item.sector}</div>
       <div className="grid grid-cols-2 gap-y-1">

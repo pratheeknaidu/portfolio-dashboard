@@ -21,9 +21,10 @@ export default function AnalyticsPage() {
     const headers = { Authorization: `Bearer ${token}` };
 
     const holdingsRes = await fetch("/api/portfolio", { headers });
+    if (!holdingsRes.ok) return;
     const holdings: Holding[] = await holdingsRes.json();
 
-    if (holdings.length > 0) {
+    if (Array.isArray(holdings) && holdings.length > 0) {
       const tickers = holdings.map((h) => h.ticker).join(",");
       const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`, { headers });
       const quotes: Record<string, Quote> = await quotesRes.json();

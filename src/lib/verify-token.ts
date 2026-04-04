@@ -10,7 +10,9 @@ export async function verifyRequest(req: NextRequest): Promise<{ uid: string } |
     const token = header.split("Bearer ")[1];
     const decoded = await adminAuth.verifyIdToken(token);
     return { uid: decoded.uid };
-  } catch {
+  } catch (err) {
+    console.error("verifyIdToken failed:", err);
+    console.error("FIREBASE_AUTH_EMULATOR_HOST:", process.env.FIREBASE_AUTH_EMULATOR_HOST);
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 }
