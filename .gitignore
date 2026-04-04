@@ -31,6 +31,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# firebase
+*-firebase-adminsdk-*.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
