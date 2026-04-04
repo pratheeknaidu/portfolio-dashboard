@@ -41,8 +41,8 @@ export function SectorChart({ sectors }: SectorChartProps) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) =>
-                [`$${value.toLocaleString()}`, "Value"]
+              formatter={(value) =>
+                [`$${Number(value).toLocaleString()}`, "Value"]
               }
             />
             <Legend />

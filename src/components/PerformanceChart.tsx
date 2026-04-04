@@ -77,7 +77,7 @@ export function PerformanceChart({ snapshots }: PerformanceChartProps) {
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                formatter={(value: number) => [`$${value.toLocaleString()}`, "Value"]}
+                formatter={(value) => [`$${Number(value).toLocaleString()}`, "Value"]}
               />
               <Line
                 type="monotone"

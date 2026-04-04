@@ -41,14 +41,16 @@ export function Treemap({ items, onHover }: Props) {
         tile="squarify"
         innerPadding={2}
         outerPadding={4}
-        colors={(node) => node.data.color}
+        colors={(node) => (node.data as Record<string, string>).color}
         borderWidth={0}
         leavesOnly={true}
         label={() => ""}
         labelSkipSize={0}
         nodeComponent={({ node }) => {
           const tooSmall = node.width < 50 || node.height < 30;
-          const pct = node.data.changePercent?.toFixed(1) ?? "0.0";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const d = node.data as any;
+          const pct = d.changePercent?.toFixed(1) ?? "0.0";
           const sign = Number(pct) >= 0 ? "+" : "";
           return (
             <div
@@ -65,7 +67,7 @@ export function Treemap({ items, onHover }: Props) {
                 alignItems: "center",
                 justifyContent: "center",
               }}
-              onMouseEnter={() => onHover(node.data.item)}
+              onMouseEnter={() => onHover(d.item)}
               onMouseLeave={() => onHover(null)}
             >
               {!tooSmall && (
