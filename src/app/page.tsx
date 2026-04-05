@@ -73,7 +73,7 @@ export default function DashboardPage() {
       <div className="flex flex-col h-screen">
         <Navbar onImportClick={() => setShowImport(true)} />
         <div className="flex flex-1 overflow-hidden">
-          <main className="flex-1 p-4 relative" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}>
+          <main className="flex-1 p-4 relative" onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })} onClick={() => setHoveredItem(null)}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-white">Portfolio Heat Map</h2>
               <TimeRangeToggle selected={range} onChange={setRange} />
