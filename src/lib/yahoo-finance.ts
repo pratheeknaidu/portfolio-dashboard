@@ -54,22 +54,22 @@ export async function getQuotes(
 
   if (range !== "1D") {
     const startDate = rangeToDate(range);
-    for (const ticker of tickers) {
-      try {
-        const history = await yahooFinance.historical(ticker, {
-          period1: startDate,
-          interval: "1d",
-        });
-        if (history.length > 0) {
-          const startPrice = history[0].close;
-          const currentPrice = results[ticker].price;
-          results[ticker].change = currentPrice - startPrice;
-          results[ticker].changePercent = ((currentPrice - startPrice) / startPrice) * 100;
+    await Promise.allSettled(
+      tickers.map(async (ticker) => {
+        if (!results[ticker]) return;
+        try {
+          const chart = await yahooFinance.chart(ticker, { period1: startDate });
+          if (chart.quotes.length > 0) {
+            const startPrice = chart.quotes[0].close!;
+            const currentPrice = results[ticker].price;
+            results[ticker].change = currentPrice - startPrice;
+            results[ticker].changePercent = ((currentPrice - startPrice) / startPrice) * 100;
+          }
+        } catch {
+          // Keep the 1D values as fallback
         }
-      } catch {
-        // Keep the 1D values as fallback
-      }
-    }
+      })
+    );
   }
 
   cache.set(cacheKey, { data: results, timestamp: Date.now() });
