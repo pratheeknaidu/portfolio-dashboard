@@ -106,9 +106,22 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
 
             {mode === "paste" ? (
               <>
-                <p className="text-xs text-gray-500 mb-2">
-                  Go to Robinhood → Stocks, select all text from the positions list, and paste below.
-                </p>
+                <ol className="text-xs text-gray-400 mb-3 space-y-1 list-decimal list-inside">
+                  <li>
+                    Open{" "}
+                    <a
+                      href="https://robinhood.com/account/investing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline"
+                    >
+                      robinhood.com/account/investing
+                    </a>
+                  </li>
+                  <li>Scroll to the <span className="text-gray-300">Stocks</span> section</li>
+                  <li>Select all rows in the stocks table and copy</li>
+                  <li>Paste below and click Import</li>
+                </ol>
                 <textarea
                   value={pasteText}
                   onChange={(e) => setPasteText(e.target.value)}
