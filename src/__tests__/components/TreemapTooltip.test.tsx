@@ -11,6 +11,7 @@ describe("TreemapTooltip", () => {
           quote: { price: 185.5, change: 2.3, changePercent: 1.25, previousClose: 183.2 },
           marketValue: 9275, totalPL: 2135, totalPLPercent: 29.9,
         }}
+        tileRect={null}
       />
     );
     expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
@@ -19,7 +20,7 @@ describe("TreemapTooltip", () => {
   });
 
   it("returns null when no item provided", () => {
-    const { container } = render(<TreemapTooltip item={null} />);
+    const { container } = render(<TreemapTooltip item={null} tileRect={null} />);
     expect(container.firstChild).toBeNull();
   });
 });

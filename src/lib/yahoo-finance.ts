@@ -1,5 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import type { Quote, TimeRange } from "@/types";
+import { getMockQuotes } from "./yahoo-finance-mock";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -15,7 +16,9 @@ function rangeToDate(range: TimeRange): Date {
   switch (range) {
     case "1W": { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
     case "1M": { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d; }
+    case "3M": { const d = new Date(now); d.setMonth(d.getMonth() - 3); return d; }
     case "YTD": return new Date(now.getFullYear(), 0, 1);
+    case "1Y": { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d; }
     default: { const d = new Date(now); d.setDate(d.getDate() - 1); return d; }
   }
 }
@@ -24,6 +27,10 @@ export async function getQuotes(
   tickers: string[],
   range: TimeRange = "1D"
 ): Promise<Record<string, Quote>> {
+  if (process.env.SANDBOX_MODE === "true") {
+    return getMockQuotes(tickers, range);
+  }
+
   const cacheKey = `${tickers.sort().join(",")}_${range}`;
   const cached = cache.get(cacheKey);
 

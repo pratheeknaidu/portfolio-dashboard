@@ -31,13 +31,13 @@ const mockItems: PortfolioItem[] = [
 
 describe("Treemap", () => {
   it("renders a tile for each portfolio item", () => {
-    render(<Treemap items={mockItems} onHover={jest.fn()} />);
+    render(<Treemap items={mockItems} sizing="equity" onSelect={jest.fn()} />);
     expect(screen.getByTestId("tile-AAPL")).toBeInTheDocument();
     expect(screen.getByTestId("tile-MSFT")).toBeInTheDocument();
   });
 
   it("passes market value as tile size", () => {
-    render(<Treemap items={mockItems} onHover={jest.fn()} />);
+    render(<Treemap items={mockItems} sizing="equity" onSelect={jest.fn()} />);
     const treemap = screen.getByTestId("treemap");
     expect(treemap).toBeInTheDocument();
   });

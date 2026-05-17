@@ -28,5 +28,6 @@ export interface PortfolioItem extends Holding {
   totalPLPercent: number;
 }
 
-export type TimeRange = "1D" | "1W" | "1M" | "YTD";
+export type TimeRange = "1D" | "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
+export type SizingMode = "equity" | "profit";
 export type AnalyticsRange = "1W" | "1M" | "3M" | "6M" | "1Y" | "All";

@@ -1,31 +1,34 @@
 "use client";
 import { ResponsiveTreeMapHtml } from "@nivo/treemap";
-import type { PortfolioItem } from "@/types";
+import type { PortfolioItem, SizingMode } from "@/types";
+import type { TileRect } from "./TreemapTooltip";
 
 function getColor(changePercent: number): string {
-  if (changePercent > 3) return "#26a641";
-  if (changePercent > 1.5) return "#3fb950";
-  if (changePercent > 0.5) return "#2ea043";
-  if (changePercent > 0) return "#1a4d2e";
-  if (changePercent > -0.5) return "#4d1a1a";
-  if (changePercent > -1.5) return "#da3633";
-  if (changePercent > -3) return "#f85149";
-  return "#ff6b6b";
+  const MAX_MAGNITUDE = 3;
+  const t = Math.min(Math.abs(changePercent) / MAX_MAGNITUDE, 1);
+  const lightness = 50 - t * 28;
+  const hue = changePercent >= 0 ? 142 : 0;
+  return `hsl(${hue}, 55%, ${lightness}%)`;
+}
+
+function sizeOf(item: PortfolioItem, sizing: SizingMode): number {
+  return sizing === "profit" ? Math.abs(item.totalPL) : item.marketValue;
 }
 
 interface Props {
   items: PortfolioItem[];
-  onHover: (item: PortfolioItem | null) => void;
+  sizing: SizingMode;
+  onSelect: (item: PortfolioItem | null, rect: TileRect | null) => void;
 }
 
-export function Treemap({ items, onHover }: Props) {
+export function Treemap({ items, sizing, onSelect }: Props) {
   const data = {
     id: "portfolio",
     children: [...items]
-      .sort((a, b) => b.marketValue - a.marketValue)
+      .sort((a, b) => sizeOf(b, sizing) - sizeOf(a, sizing))
       .map((item) => ({
         id: item.ticker,
-        value: item.marketValue,
+        value: sizeOf(item, sizing),
         changePercent: item.quote.changePercent,
         color: getColor(item.quote.changePercent),
         item,
@@ -66,9 +69,13 @@ export function Treemap({ items, onHover }: Props) {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                cursor: "pointer",
               }}
-              onMouseEnter={() => onHover(d.item)}
-              onMouseLeave={() => onHover(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                const r = e.currentTarget.getBoundingClientRect();
+                onSelect(d.item, { top: r.top, left: r.left, width: r.width, height: r.height });
+              }}
             >
               {!tooSmall && (
                 <>
