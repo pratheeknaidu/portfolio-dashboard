@@ -1,10 +1,7 @@
 import { initializeApp, getApps, cert, App } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
+import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { getAuth, Auth } from "firebase-admin/auth";
 
-// Server-only flag — never read NEXT_PUBLIC_* server-side to gate Admin SDK
-// behavior, since that var is also embedded in the client bundle and changing
-// it client-side would have no effect here (but could mislead a reader).
 const useEmulator = process.env.USE_EMULATOR === "true";
 
 if (useEmulator) {
@@ -12,24 +9,45 @@ if (useEmulator) {
   process.env.FIREBASE_AUTH_EMULATOR_HOST = "localhost:9099";
 }
 
-let app: App;
+let _app: App | null = null;
 
-if (getApps().length === 0) {
+function getApp(): App {
+  if (_app) return _app;
+  if (getApps().length > 0) { _app = getApps()[0]; return _app; }
+
   if (useEmulator) {
-    app = initializeApp({ projectId: "demo-portfolio" });
-  } else {
-    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (!raw || raw.trim() === "") {
-      throw new Error(
-        "FIREBASE_SERVICE_ACCOUNT is not set. Set it in Vercel env vars (production) " +
-        "or set USE_EMULATOR=true for local emulator development.",
-      );
-    }
-    app = initializeApp({ credential: cert(JSON.parse(raw)) });
+    _app = initializeApp({ projectId: "demo-portfolio" });
+    return _app;
   }
-} else {
-  app = getApps()[0];
+
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw || raw.trim() === "") {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT is not set. Set it in Vercel env vars (production) " +
+      "or set USE_EMULATOR=true for local emulator development.",
+    );
+  }
+  _app = initializeApp({ credential: cert(JSON.parse(raw)) });
+  return _app;
 }
 
-export const adminDb = getFirestore(app);
-export const adminAuth = getAuth(app);
+/**
+ * Lazy proxy: defers Firebase Admin initialization until first property
+ * access. Without this, importing the module triggers init at build time
+ * (Next.js's "Collecting page data" phase), which fails when secrets
+ * aren't available in the build env. The proxy also bind()s returned
+ * functions so SDK methods retain their `this` receiver.
+ */
+function lazy<T extends object>(factory: () => T): T {
+  let target: T | null = null;
+  return new Proxy({} as T, {
+    get(_, prop) {
+      if (!target) target = factory();
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
+export const adminDb: Firestore = lazy(() => getFirestore(getApp()));
+export const adminAuth: Auth = lazy(() => getAuth(getApp()));
