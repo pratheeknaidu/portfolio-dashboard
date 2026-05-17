@@ -37,6 +37,9 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# sandbox emulator state
+.sandbox-data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

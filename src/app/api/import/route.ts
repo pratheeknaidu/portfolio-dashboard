@@ -3,6 +3,7 @@ import { verifyRequest } from "@/lib/verify-token";
 import { adminDb } from "@/lib/firebase-admin";
 import Papa from "papaparse";
 import YahooFinance from "yahoo-finance2";
+import { getMockSummary } from "@/lib/yahoo-finance-mock";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -46,12 +47,18 @@ export async function POST(req: NextRequest) {
     let companyName = parsedName || "";
     let sector = "";
 
-    try {
-      const summary = await yahooFinance.quoteSummary(ticker, { modules: ["price", "summaryProfile"] });
-      companyName = summary.price?.shortName ?? companyName;
-      sector = summary.summaryProfile?.sector ?? "";
-    } catch {
-      // Will populate lazily later
+    if (process.env.SANDBOX_MODE === "true") {
+      const mock = getMockSummary(ticker);
+      companyName = mock.name;
+      sector = mock.sector;
+    } else {
+      try {
+        const summary = await yahooFinance.quoteSummary(ticker, { modules: ["price", "summaryProfile"] });
+        companyName = summary.price?.shortName ?? companyName;
+        sector = summary.summaryProfile?.sector ?? "";
+      } catch {
+        // Will populate lazily later
+      }
     }
 
     const existing = await holdingsRef.doc(ticker).get();

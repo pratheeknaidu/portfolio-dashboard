@@ -11,6 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "seed": "ts-node scripts/seed-emulator.ts",
+    "sandbox": "bash scripts/sandbox.sh",
     "test:integration": "firebase emulators:exec \"npx jest --testPathPattern=integration\""
   },
   "dependencies": {

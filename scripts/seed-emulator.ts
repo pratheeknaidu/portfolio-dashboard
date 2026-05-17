@@ -2,6 +2,12 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 
+// Keep these in sync with src/lib/sandbox-constants.ts (duplicated to avoid
+// ts-node ESM relative-import extension headaches).
+const SANDBOX_USER_UID = "seed-user-001";
+const SANDBOX_USER_EMAIL = "seed@test.com";
+const SANDBOX_USER_PASSWORD = "sandbox-password";
+
 process.env.FIRESTORE_EMULATOR_HOST = "localhost:8080";
 process.env.FIREBASE_AUTH_EMULATOR_HOST = "localhost:9099";
 
@@ -9,7 +15,7 @@ const app = initializeApp({ projectId: "demo-portfolio" });
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-const SEED_UID = "seed-user-001";
+const SEED_UID = SANDBOX_USER_UID;
 
 const holdings = [
   { ticker: "AAPL", companyName: "Apple Inc.", sector: "Technology", shares: 50, avgCost: 142.80 },
@@ -35,9 +41,19 @@ const snapshots = [
 async function seed() {
   console.log("Creating seed user...");
   try {
-    await auth.createUser({ uid: SEED_UID, email: "seed@test.com", displayName: "Seed User" });
+    await auth.createUser({
+      uid: SEED_UID,
+      email: SANDBOX_USER_EMAIL,
+      password: SANDBOX_USER_PASSWORD,
+      displayName: "Seed User",
+    });
   } catch {
-    console.log("User already exists, continuing...");
+    // Already exists — ensure password matches in case it was rotated
+    await auth.updateUser(SEED_UID, {
+      email: SANDBOX_USER_EMAIL,
+      password: SANDBOX_USER_PASSWORD,
+    });
+    console.log("User already exists, password refreshed.");
   }
 
   console.log("Writing holdings...");
