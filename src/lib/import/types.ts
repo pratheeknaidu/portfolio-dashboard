@@ -13,6 +13,7 @@ export interface ImportInput {
 export interface ImportResult {
   imported: string[];
   updated: string[];
+  removed: string[];
   errors: string[];
 }
 

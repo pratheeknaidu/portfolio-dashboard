@@ -10,6 +10,7 @@ interface Props {
 interface ImportResult {
   imported: string[];
   updated: string[];
+  removed: string[];
   errors: string[];
 }
 
@@ -61,7 +62,7 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
       const data: ImportResult = await res.json();
       setResult(data);
 
-      if (data.imported.length > 0 || data.updated.length > 0) {
+      if (data.imported.length > 0 || data.updated.length > 0 || data.removed.length > 0) {
         timerRef.current = setTimeout(onSuccess, 2000);
       }
     } catch (err) {
@@ -73,7 +74,7 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
 
   const handleResultClose = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (result && (result.imported.length > 0 || result.updated.length > 0)) {
+    if (result && (result.imported.length > 0 || result.updated.length > 0 || result.removed.length > 0)) {
       onSuccess();
     } else {
       onClose();
@@ -168,6 +169,9 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
             )}
             {result.updated.length > 0 && (
               <p className="text-accent">Updated: {result.updated.join(", ")}</p>
+            )}
+            {result.removed.length > 0 && (
+              <p className="text-loss">Removed: {result.removed.join(", ")}</p>
             )}
             {result.errors.length > 0 && (
               <div className="text-loss">
