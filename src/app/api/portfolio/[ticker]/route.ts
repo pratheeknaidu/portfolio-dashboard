@@ -29,6 +29,8 @@ export async function PATCH(
   const authResult = await verifyRequest(req);
   if (authResult instanceof NextResponse) return authResult;
 
+  const ticker = params.ticker.toUpperCase();
+
   const body = await req.json().catch(() => ({}));
   const payload: { shares?: number; avgCost?: number } = {};
 
@@ -48,7 +50,6 @@ export async function PATCH(
     return NextResponse.json({ error: "Must provide at least one of: shares, avgCost" }, { status: 400 });
   }
 
-  const ticker = params.ticker.toUpperCase();
   const ref = holdingRef(authResult.uid, ticker);
   const snap = await ref.get();
   if (!snap.exists) {
