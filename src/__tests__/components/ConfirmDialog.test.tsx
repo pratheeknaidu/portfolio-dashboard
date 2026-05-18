@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -55,5 +55,15 @@ describe("ConfirmDialog", () => {
     expect(screen.getByRole("button", { name: /delete/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /cancel/i })).toBeDisabled();
     resolve();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /delete/i })).not.toBeDisabled();
+    });
+  });
+
+  it("fires onCancel when Escape is pressed (not pending)", async () => {
+    const onCancel = jest.fn();
+    render(<ConfirmDialog title="t" message="m" onConfirm={jest.fn()} onCancel={onCancel} />);
+    await userEvent.keyboard("{Escape}");
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

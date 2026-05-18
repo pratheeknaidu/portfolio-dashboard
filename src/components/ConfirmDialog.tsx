@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ConfirmDialogProps {
   title: string;
@@ -30,17 +30,26 @@ export function ConfirmDialog({
     }
   };
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !pending) onCancel();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [pending, onCancel]);
+
   const confirmClass = destructive
     ? "bg-loss hover:bg-loss/90"
     : "bg-accent hover:bg-accent-dark";
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-surface-card border border-surface-border rounded-xl p-6 w-[400px] shadow-2xl">
-        <h2 className="text-lg font-bold text-white mb-2">{title}</h2>
+      <div role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" className="bg-surface-card border border-surface-border rounded-xl p-6 w-[400px] shadow-2xl">
+        <h2 id="confirm-dialog-title" className="text-lg font-bold text-white mb-2">{title}</h2>
         <p className="text-sm text-gray-300 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button
+            type="button"
             onClick={onCancel}
             disabled={pending}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white disabled:opacity-50"
@@ -48,6 +57,7 @@ export function ConfirmDialog({
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleConfirm}
             disabled={pending}
             aria-label={confirmLabel}
