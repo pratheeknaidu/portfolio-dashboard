@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import type { PortfolioItem } from "@/types";
 
@@ -43,5 +44,50 @@ describe("HoldingsTable", () => {
     render(<HoldingsTable items={items} totalValue={17975} />);
     const aaplPL = screen.getByText(/\$2,135/);
     expect(aaplPL.className).toContain("text-gain");
+  });
+});
+
+describe("HoldingsTable Actions column", () => {
+  it("does not render the Actions column when no callbacks are provided", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    expect(screen.queryByRole("button", { name: /actions for/i })).not.toBeInTheDocument();
+  });
+
+  it("renders a ⋯ button per row when onEdit or onDelete is provided", () => {
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={jest.fn()} onDelete={jest.fn()} />);
+    expect(screen.getAllByRole("button", { name: /actions for/i })).toHaveLength(items.length);
+  });
+
+  it("opens the dropdown on ⋯ click and closes it on outside click", async () => {
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={jest.fn()} onDelete={jest.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /actions for AAPL/i }));
+    expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+  });
+
+  it("fires onEdit with the holding when Edit is clicked", async () => {
+    const onEdit = jest.fn();
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={onEdit} onDelete={jest.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /actions for AAPL/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^edit$/i }));
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ ticker: "AAPL" }));
+  });
+
+  it("fires onDelete with the holding when Delete is clicked", async () => {
+    const onDelete = jest.fn();
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={jest.fn()} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole("button", { name: /actions for MSFT/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ ticker: "MSFT" }));
+  });
+
+  it("closes the menu on Escape", async () => {
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={jest.fn()} onDelete={jest.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /actions for AAPL/i }));
+    expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
   });
 });

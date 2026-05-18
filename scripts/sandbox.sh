@@ -17,6 +17,6 @@ if [ -f "$DATA_DIR/firebase-export-metadata.json" ]; then
 fi
 
 EMULATOR_CMD="firebase emulators:start --only auth,firestore --export-on-exit=$DATA_DIR $IMPORT_FLAG"
-APP_CMD="wait-on tcp:8080 && npm run seed && SANDBOX_MODE=true USE_EMULATOR=true NEXT_PUBLIC_USE_EMULATOR=true next dev"
+APP_CMD="wait-on tcp:8080 tcp:9099 && npm run seed && SANDBOX_MODE=true USE_EMULATOR=true NEXT_PUBLIC_USE_EMULATOR=true next dev"
 
 exec npx concurrently -k -n emu,app -c blue,green "$EMULATOR_CMD" "$APP_CMD"
