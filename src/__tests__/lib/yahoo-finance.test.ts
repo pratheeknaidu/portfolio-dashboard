@@ -38,12 +38,33 @@ describe("getQuotes", () => {
     });
 
     const result = await getQuotes(["AAPL"], "1D");
-    expect(result.AAPL).toEqual({
+    expect(result.quotes.AAPL).toEqual({
       price: 185.5,
       change: 2.3,
       changePercent: 1.25,
       previousClose: 183.2,
     });
+    expect(result.failed).toEqual([]);
+  });
+
+  it("returns unfetched tickers in `failed`", async () => {
+    mockQuote.mockImplementation((ticker: string) => {
+      if (ticker === "AAPL") {
+        return Promise.resolve({
+          symbol: "AAPL",
+          regularMarketPrice: 185.5,
+          regularMarketChange: 2.3,
+          regularMarketChangePercent: 1.25,
+          regularMarketPreviousClose: 183.2,
+        });
+      }
+      return Promise.reject(new Error("not found"));
+    });
+
+    const result = await getQuotes(["AAPL", "BOGUS"], "1D");
+    expect(result.quotes.AAPL).toBeDefined();
+    expect(result.quotes.BOGUS).toBeUndefined();
+    expect(result.failed).toEqual(["BOGUS"]);
   });
 
   it("returns cached data within TTL", async () => {
@@ -75,7 +96,7 @@ describe("getQuotes", () => {
     });
 
     const result = await getQuotes(["AAPL"], "1W");
-    expect(result.AAPL.changePercent).toBeCloseTo(5.56, 1);
+    expect(result.quotes.AAPL.changePercent).toBeCloseTo(5.56, 1);
     expect(mockChart).toHaveBeenCalledWith("AAPL", expect.objectContaining({ period1: expect.any(Date) }));
   });
 
@@ -92,8 +113,9 @@ describe("getQuotes", () => {
     });
 
     const result = await getQuotes(["AAPL", "BAD", "MSFT"], "1D");
-    expect(result.AAPL).toBeDefined();
-    expect(result.MSFT).toBeDefined();
-    expect(result.BAD).toBeUndefined();
+    expect(result.quotes.AAPL).toBeDefined();
+    expect(result.quotes.MSFT).toBeDefined();
+    expect(result.quotes.BAD).toBeUndefined();
+    expect(result.failed).toEqual(["BAD"]);
   });
 });

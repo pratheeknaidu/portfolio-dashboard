@@ -6,6 +6,10 @@ jest.mock("@/lib/auth-context", () => ({
   useAuth: () => ({ getIdToken: jest.fn().mockResolvedValue("mock-token") }),
 }));
 
+jest.mock("@/lib/toast-context", () => ({
+  useToast: () => ({ error: jest.fn(), info: jest.fn(), success: jest.fn(), show: jest.fn(), dismiss: jest.fn(), toasts: [] }),
+}));
+
 global.fetch = jest.fn();
 
 const onClose = jest.fn();

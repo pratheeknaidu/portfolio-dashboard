@@ -4,8 +4,13 @@ import { getMockQuotes } from "./yahoo-finance-mock";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
+export interface QuotesResult {
+  quotes: Record<string, Quote>;
+  failed: string[];
+}
+
 const CACHE_TTL = 60_000; // 60 seconds
-const cache = new Map<string, { data: Record<string, Quote>; timestamp: number }>();
+const cache = new Map<string, { data: QuotesResult; timestamp: number }>();
 
 export function clearCache() {
   cache.clear();
@@ -26,9 +31,9 @@ function rangeToDate(range: TimeRange): Date {
 export async function getQuotes(
   tickers: string[],
   range: TimeRange = "1D"
-): Promise<Record<string, Quote>> {
+): Promise<QuotesResult> {
   if (process.env.SANDBOX_MODE === "true") {
-    return getMockQuotes(tickers, range);
+    return { quotes: getMockQuotes(tickers, range), failed: [] };
   }
 
   const cacheKey = `${tickers.sort().join(",")}_${range}`;
@@ -38,7 +43,7 @@ export async function getQuotes(
     return cached.data;
   }
 
-  const results: Record<string, Quote> = {};
+  const quotes: Record<string, Quote> = {};
 
   // Fetch each ticker individually to avoid one bad ticker breaking the batch
   await Promise.allSettled(
@@ -46,7 +51,7 @@ export async function getQuotes(
       try {
         const q = await yahooFinance.quote(ticker);
         if (q && q.regularMarketPrice) {
-          results[q.symbol] = {
+          quotes[q.symbol] = {
             price: q.regularMarketPrice,
             change: q.regularMarketChange ?? 0,
             changePercent: q.regularMarketChangePercent ?? 0,
@@ -63,14 +68,14 @@ export async function getQuotes(
     const startDate = rangeToDate(range);
     await Promise.allSettled(
       tickers.map(async (ticker) => {
-        if (!results[ticker]) return;
+        if (!quotes[ticker]) return;
         try {
           const chart = await yahooFinance.chart(ticker, { period1: startDate });
           if (chart.quotes.length > 0) {
             const startPrice = chart.quotes[0].close!;
-            const currentPrice = results[ticker].price;
-            results[ticker].change = currentPrice - startPrice;
-            results[ticker].changePercent = ((currentPrice - startPrice) / startPrice) * 100;
+            const currentPrice = quotes[ticker].price;
+            quotes[ticker].change = currentPrice - startPrice;
+            quotes[ticker].changePercent = ((currentPrice - startPrice) / startPrice) * 100;
           }
         } catch {
           // Keep the 1D values as fallback
@@ -79,6 +84,8 @@ export async function getQuotes(
     );
   }
 
-  cache.set(cacheKey, { data: results, timestamp: Date.now() });
-  return results;
+  const failed = tickers.filter((t) => !quotes[t]);
+  const result: QuotesResult = { quotes, failed };
+  cache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
 }

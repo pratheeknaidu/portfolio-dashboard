@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/lib/toast-context";
 
 interface Props {
   onClose: () => void;
@@ -18,6 +19,7 @@ type ImportMode = "paste" | "csv";
 
 export function CsvImportModal({ onClose, onSuccess }: Props) {
   const { getIdToken } = useAuth();
+  const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mode, setMode] = useState<ImportMode>("paste");
@@ -62,11 +64,21 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
       const data: ImportResult = await res.json();
       setResult(data);
 
-      if (data.imported.length > 0 || data.updated.length > 0 || data.removed.length > 0) {
+      const changed = data.imported.length + data.updated.length + data.removed.length;
+      if (changed > 0) {
+        const parts: string[] = [];
+        if (data.imported.length) parts.push(`${data.imported.length} added`);
+        if (data.updated.length) parts.push(`${data.updated.length} updated`);
+        if (data.removed.length) parts.push(`${data.removed.length} removed`);
+        toast.success(`Holdings: ${parts.join(", ")}.`);
         timerRef.current = setTimeout(onSuccess, 2000);
+      } else if (data.errors.length > 0) {
+        toast.error("No holdings were imported — see details in the dialog.");
       }
     } catch (err) {
-      setError(String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(msg);
+      toast.error(`Import failed: ${msg}`);
     } finally {
       setLoading(false);
     }

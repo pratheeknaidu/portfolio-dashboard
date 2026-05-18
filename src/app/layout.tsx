@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ToastProvider } from "@/lib/toast-context";
+import { ToastStack } from "@/components/ToastStack";
 
 const displayFont = Space_Grotesk({
   subsets: ["latin"],
@@ -37,7 +39,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`dark ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
     >
       <body className="min-h-screen">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+            <ToastStack />
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

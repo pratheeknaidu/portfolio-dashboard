@@ -32,20 +32,22 @@ describe("GET /api/quotes", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns quotes for valid tickers", async () => {
+  it("returns quotes and failed tickers in the response body", async () => {
     (verifyRequest as jest.Mock).mockResolvedValue({ uid: "user123" });
     (getQuotes as jest.Mock).mockResolvedValue({
-      AAPL: { price: 185.5, change: 2.3, changePercent: 1.25, previousClose: 183.2 },
+      quotes: { AAPL: { price: 185.5, change: 2.3, changePercent: 1.25, previousClose: 183.2 } },
+      failed: ["BOGUS"],
     });
 
-    const req = new NextRequest("http://localhost/api/quotes?tickers=AAPL&range=1D", {
+    const req = new NextRequest("http://localhost/api/quotes?tickers=AAPL,BOGUS&range=1D", {
       headers: { Authorization: "Bearer valid-token" },
     });
     const res = await GET(req);
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.AAPL.price).toBe(185.5);
+    expect(body.quotes.AAPL.price).toBe(185.5);
+    expect(body.failed).toEqual(["BOGUS"]);
   });
 
   it("returns error shape when Yahoo Finance fails", async () => {
