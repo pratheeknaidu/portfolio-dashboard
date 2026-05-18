@@ -7,6 +7,8 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
 import { CsvImportModal } from "@/components/CsvImportModal";
+import { EditHoldingModal } from "@/components/EditHoldingModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Holding, Quote, PortfolioItem, Snapshot } from "@/types";
 
 export default function AnalyticsPage() {
@@ -14,6 +16,9 @@ export default function AnalyticsPage() {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [showImport, setShowImport] = useState(false);
+  const [editing, setEditing] = useState<PortfolioItem | null>(null);
+  const [deleting, setDeleting] = useState<PortfolioItem | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     const token = await getIdToken();
@@ -43,9 +48,10 @@ export default function AnalyticsPage() {
           };
         })
       );
+    } else {
+      setItems([]);
     }
 
-    // Fetch snapshots
     const snapshotsRes = await fetch("/api/snapshot", { headers });
     if (snapshotsRes.ok) {
       const data = await snapshotsRes.json();
@@ -56,6 +62,23 @@ export default function AnalyticsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleting) return;
+    setDeleteError(null);
+    const token = await getIdToken();
+    const res = await fetch(`/api/portfolio/${deleting.ticker}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setDeleteError(body.error || `Delete failed (${res.status})`);
+      return;
+    }
+    setDeleting(null);
+    fetchData();
+  }, [deleting, getIdToken, fetchData]);
 
   const totalValue = items.reduce((s, i) => s + i.marketValue, 0);
   const sectors = items.reduce<Record<string, number>>((acc, i) => {
@@ -84,7 +107,12 @@ export default function AnalyticsPage() {
           </div>
           <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
             <h2 className="text-lg font-semibold text-white mb-4">Holdings</h2>
-            <HoldingsTable items={items} totalValue={totalValue} />
+            <HoldingsTable
+              items={items}
+              totalValue={totalValue}
+              onEdit={setEditing}
+              onDelete={(item) => { setDeleteError(null); setDeleting(item); }}
+            />
           </section>
         </main>
       </div>
@@ -92,6 +120,27 @@ export default function AnalyticsPage() {
         <CsvImportModal
           onClose={() => setShowImport(false)}
           onSuccess={() => { setShowImport(false); fetchData(); }}
+        />
+      )}
+      {editing && (
+        <EditHoldingModal
+          holding={editing}
+          onClose={() => setEditing(null)}
+          onSuccess={() => { setEditing(null); fetchData(); }}
+        />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title="Remove holding?"
+          message={
+            deleteError
+              ? `${deleteError} — try again, or cancel.`
+              : `Remove ${deleting.ticker} from your portfolio?`
+          }
+          confirmLabel="Delete"
+          destructive
+          onConfirm={handleConfirmDelete}
+          onCancel={() => { setDeleting(null); setDeleteError(null); }}
         />
       )}
     </AuthGuard>
