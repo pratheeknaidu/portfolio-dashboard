@@ -67,6 +67,8 @@ describe("DELETE /api/portfolio/[ticker]", () => {
   it("is idempotent — succeeds even if the holding does not exist", async () => {
     docRef.delete.mockResolvedValueOnce(undefined);
     const res = await DELETE(buildReq("DELETE"), { params: { ticker: "ZZZZ" } });
+    const body = await res.json();
     expect(res.status).toBe(200);
+    expect(body).toEqual({ success: true, ticker: "ZZZZ" });
   });
 });
