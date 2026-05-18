@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PortfolioItem } from "@/types";
 
 function fmt(value: number): string {
@@ -23,12 +23,35 @@ type SortKey =
 interface HoldingsTableProps {
   items: PortfolioItem[];
   totalValue: number;
+  onEdit?: (item: PortfolioItem) => void;
+  onDelete?: (item: PortfolioItem) => void;
 }
 
-export function HoldingsTable({ items, totalValue }: HoldingsTableProps) {
+export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [searchTerm, setSearchTerm] = useState("");
+  const [openMenuTicker, setOpenMenuTicker] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const showActions = Boolean(onEdit || onDelete);
+
+  useEffect(() => {
+    if (!openMenuTicker) return;
+    const handleDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuTicker(null);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenuTicker(null);
+    };
+    document.addEventListener("mousedown", handleDocClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleDocClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [openMenuTicker]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -125,6 +148,7 @@ export function HoldingsTable({ items, totalValue }: HoldingsTableProps) {
               <SortHeader label="Day Change" col="dayChange" />
               <SortHeader label="Total P&L" col="totalPL" />
               <SortHeader label="% of Portfolio" col="portfolioPercent" />
+              {showActions && <th className="px-3 py-2" aria-label="Actions" />}
             </tr>
           </thead>
           <tbody>
@@ -172,6 +196,46 @@ export function HoldingsTable({ items, totalValue }: HoldingsTableProps) {
                     {fmt(item.totalPL)}
                   </td>
                   <td className="px-3 py-2 text-gray-300">{portfolioPct}%</td>
+                  {showActions && (
+                    <td className="px-3 py-2 relative">
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${item.ticker}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuTicker(openMenuTicker === item.ticker ? null : item.ticker);
+                        }}
+                        className="text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-surface-border"
+                      >
+                        ⋯
+                      </button>
+                      {openMenuTicker === item.ticker && (
+                        <div
+                          ref={menuRef}
+                          className="absolute right-0 top-full mt-1 bg-surface-card border border-surface-border rounded-md shadow-lg z-10 min-w-[120px]"
+                        >
+                          {onEdit && (
+                            <button
+                              type="button"
+                              onClick={() => { setOpenMenuTicker(null); onEdit(item); }}
+                              className="block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-surface-border"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              type="button"
+                              onClick={() => { setOpenMenuTicker(null); onDelete(item); }}
+                              className="block w-full text-left px-3 py-2 text-sm text-loss hover:bg-surface-border"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
