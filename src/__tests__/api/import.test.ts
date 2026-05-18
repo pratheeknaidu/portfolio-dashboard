@@ -16,22 +16,28 @@ jest.mock("@/lib/firebase-admin", () => {
   const mockUserDocRef = {
     collection: jest.fn().mockReturnValue(mockCollectionRef),
   };
+  const mockBatch = {
+    set: jest.fn(),
+    delete: jest.fn(),
+    commit: jest.fn().mockResolvedValue(undefined),
+  };
   return {
     adminDb: {
       collection: jest.fn().mockReturnValue({
         doc: jest.fn().mockReturnValue(mockUserDocRef),
       }),
+      batch: jest.fn(() => mockBatch),
     },
   };
 });
 jest.mock("yahoo-finance2", () => ({
   __esModule: true,
-  default: {
+  default: jest.fn().mockImplementation(() => ({
     quoteSummary: jest.fn().mockResolvedValue({
       price: { shortName: "Apple Inc." },
       summaryProfile: { sector: "Technology" },
     }),
-  },
+  })),
 }));
 
 import { verifyRequest } from "@/lib/verify-token";

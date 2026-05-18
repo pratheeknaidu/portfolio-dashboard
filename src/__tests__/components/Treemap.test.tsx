@@ -2,9 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { Treemap } from "@/components/Treemap";
 import type { PortfolioItem } from "@/types";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 jest.mock("@nivo/treemap", () => ({
-  ResponsiveTreeMap: ({ data }: any) => (
+  ResponsiveTreeMapHtml: ({ data }: any) => (
     <div data-testid="treemap">
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {data.children.map((c: any) => (
         <div key={c.id} data-testid={`tile-${c.id}`}>
           {c.id}
