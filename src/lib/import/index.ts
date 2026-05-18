@@ -21,13 +21,13 @@ export async function importHoldings(uid: string, input: ImportInput): Promise<I
 
   const parsed = Array.from(holdings.values()).filter((h) => h.shares > 0);
   if (parsed.length === 0) {
-    return { imported: [], updated: [], errors };
+    return { imported: [], updated: [], removed: [], errors };
   }
 
   const summaries = await enrichHoldings(parsed.map((h) => h.ticker));
-  const { imported, updated } = await writeHoldings(uid, parsed, summaries);
+  const { imported, updated, removed } = await writeHoldings(uid, parsed, summaries);
 
-  return { imported, updated, errors };
+  return { imported, updated, removed, errors };
 }
 
 export { ImportError } from "./types";
