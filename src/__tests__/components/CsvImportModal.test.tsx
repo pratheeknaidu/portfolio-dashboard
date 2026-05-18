@@ -8,46 +8,69 @@ jest.mock("@/lib/auth-context", () => ({
 
 global.fetch = jest.fn();
 
-describe("CsvImportModal", () => {
-  const onClose = jest.fn();
-  const onSuccess = jest.fn();
+const onClose = jest.fn();
+const onSuccess = jest.fn();
 
+function emptyResult(extra: Partial<{ imported: string[]; updated: string[]; removed: string[]; errors: string[] }> = {}) {
+  return { imported: [], updated: [], removed: [], errors: [], ...extra };
+}
+
+async function switchToCsvTab() {
+  await userEvent.click(screen.getByRole("button", { name: /upload csv/i }));
+}
+
+describe("CsvImportModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("renders file upload input and submit button", () => {
+  it("renders with paste mode as the default tab", () => {
     render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
-    expect(screen.getByText(/import csv/i)).toBeInTheDocument();
+    expect(screen.getByText(/import holdings/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/paste positions/i)).toBeInTheDocument();
+  });
+
+  it("shows the file input after switching to CSV tab", async () => {
+    render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+    await switchToCsvTab();
     expect(screen.getByLabelText(/choose file/i)).toBeInTheDocument();
   });
 
-  it("disables submit when no file selected", () => {
+  it("disables the Import button when paste textarea is empty", () => {
     render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
-    const submitBtn = screen.getByRole("button", { name: /upload/i });
-    expect(submitBtn).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^import$/i })).toBeDisabled();
   });
 
-  it("shows success results after upload", async () => {
+  it("disables the Import button in CSV mode when no file is selected", async () => {
+    render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+    await switchToCsvTab();
+    expect(screen.getByRole("button", { name: /^import$/i })).toBeDisabled();
+  });
+
+  it("submits a CSV file and shows imported tickers in the success view", async () => {
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ imported: ["AAPL", "MSFT"], updated: [], errors: [] }),
+      json: () => Promise.resolve(emptyResult({ imported: ["AAPL", "MSFT"] })),
     });
 
     render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+    await switchToCsvTab();
 
-    const file = new File(["Instrument,Quantity,Average Cost\nAAPL,50,142.80"], "holdings.csv", { type: "text/csv" });
-    const input = screen.getByLabelText(/choose file/i);
-    await userEvent.upload(input, file);
+    const file = new File(
+      ["Instrument,Quantity,Average Cost\nAAPL,50,142.80"],
+      "holdings.csv",
+      { type: "text/csv" },
+    );
+    await userEvent.upload(screen.getByLabelText(/choose file/i), file);
 
-    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^import$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/imported: AAPL, MSFT/i)).toBeInTheDocument();
     });
   });
 
-  it("calls onClose when cancel clicked", () => {
+  it("calls onClose when Cancel is clicked", () => {
     render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onClose).toHaveBeenCalled();
@@ -57,16 +80,16 @@ describe("CsvImportModal", () => {
     jest.useFakeTimers({ advanceTimers: true });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ imported: ["AAPL"], updated: [], errors: ["Unknown ticker: XYZ"] }),
+      json: () => Promise.resolve(emptyResult({ imported: ["AAPL"], errors: ["Unknown ticker: XYZ"] })),
     });
 
     render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+    await switchToCsvTab();
 
     const file = new File(["data"], "holdings.csv", { type: "text/csv" });
-    const input = screen.getByLabelText(/choose file/i);
-    await userEvent.upload(input, file);
+    await userEvent.upload(screen.getByLabelText(/choose file/i), file);
 
-    fireEvent.click(screen.getByRole("button", { name: /upload/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^import$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/imported: AAPL/i)).toBeInTheDocument();
@@ -77,5 +100,26 @@ describe("CsvImportModal", () => {
     expect(onSuccess).toHaveBeenCalled();
 
     jest.useRealTimers();
+  });
+
+  it("submits pasted text via JSON and shows imported tickers", async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(emptyResult({ imported: ["AAPL"] })),
+    });
+
+    render(<CsvImportModal onClose={onClose} onSuccess={onSuccess} />);
+
+    const textarea = screen.getByPlaceholderText(/paste positions/i);
+    await userEvent.type(textarea, "AAPL 50 $142.80");
+
+    fireEvent.click(screen.getByRole("button", { name: /^import$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/imported: AAPL/i)).toBeInTheDocument();
+    });
+
+    const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(init.headers["Content-Type"]).toBe("application/json");
   });
 });
