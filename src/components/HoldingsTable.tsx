@@ -32,8 +32,13 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [searchTerm, setSearchTerm] = useState("");
   const [openMenuTicker, setOpenMenuTicker] = useState<string | null>(null);
+  const [menuDirection, setMenuDirection] = useState<"down" | "up">("down");
   const menuRef = useRef<HTMLDivElement | null>(null);
   const showActions = Boolean(onEdit || onDelete);
+  // Approx height of the dropdown (Edit + Delete @ ~37px each). If less than
+  // this much room exists below the kebab button, flip the menu upward so it
+  // is not clipped by ancestor `overflow-*` containers.
+  const MENU_HEIGHT = 100;
 
   useEffect(() => {
     if (!openMenuTicker) return;
@@ -203,7 +208,14 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
                         aria-label={`Actions for ${item.ticker}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenMenuTicker(openMenuTicker === item.ticker ? null : item.ticker);
+                          if (openMenuTicker === item.ticker) {
+                            setOpenMenuTicker(null);
+                            return;
+                          }
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const spaceBelow = window.innerHeight - rect.bottom;
+                          setMenuDirection(spaceBelow < MENU_HEIGHT ? "up" : "down");
+                          setOpenMenuTicker(item.ticker);
                         }}
                         className="text-gray-400 hover:text-white px-2 py-1 rounded hover:bg-surface-border"
                       >
@@ -212,7 +224,7 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
                       {openMenuTicker === item.ticker && (
                         <div
                           ref={menuRef}
-                          className="absolute right-0 top-full mt-1 bg-surface-card border border-surface-border rounded-md shadow-lg z-10 min-w-[120px]"
+                          className={`absolute right-0 ${menuDirection === "up" ? "bottom-full mb-1" : "top-full mt-1"} bg-surface-card border border-surface-border rounded-md shadow-lg z-10 min-w-[120px]`}
                         >
                           {onEdit && (
                             <button
