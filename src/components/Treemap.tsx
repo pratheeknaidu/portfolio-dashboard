@@ -15,7 +15,11 @@ function getColor(changePercent: number): string {
 }
 
 function sizeOf(item: PortfolioItem, sizing: SizingMode): number {
-  return sizing === "profit" ? Math.abs(item.totalPL) : item.marketValue;
+  // `quote.change` is range-aware (lifetime in ALL mode — see page.tsx),
+  // so this keeps profit-mode sizing in sync with the selected time range.
+  return sizing === "profit"
+    ? Math.abs(item.shares * item.quote.change)
+    : item.marketValue;
 }
 
 /**
