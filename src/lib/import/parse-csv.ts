@@ -28,6 +28,27 @@ const SHARE_CHANGING_CODES = new Set([
   "SPR",  // Spinoff / reissue — paired S (outgoing) + non-S (incoming) rows
 ]);
 
+/**
+ * Robinhood Trans Codes that represent cash-only events (dividends, fees,
+ * transfers, interest, etc.) — verified not to affect share counts.
+ * Anything outside SHARE_CHANGING_CODES ∪ KNOWN_CASH_CODES will be
+ * collected and surfaced to the user so new codes Robinhood starts
+ * emitting don't get silently dropped if they actually matter.
+ */
+const KNOWN_CASH_CODES = new Set([
+  "CDIV", // Cash dividend
+  "DTAX", // Dividend tax withholding
+  "MDIV", // Manufactured dividend (on shares lent out)
+  "INT",  // Interest
+  "ACH",  // ACH bank transfer
+  "GOLD", // Robinhood Gold subscription fee
+  "GMPC", // Gold plan credit
+  "RTP",  // Real-time payment
+  "ITRF", // Inter-brokerage transfer
+  "SLIP", // Stock lending income payment
+  "DFEE", // Day-trading / regulatory fee
+]);
+
 interface TxRow {
   date: Date;
   ticker: string;
@@ -52,13 +73,21 @@ function parseQuantity(raw: string | undefined): { qty: number; isOutgoing: bool
 }
 
 /**
- * Parse a Price or Amount cell. Strips "$" and ",", treats "(...)" as negative.
- * Returns 0 for empty/invalid input.
+ * Parse a Price or Amount cell. Strips "$" and ",", treats "(...)" as
+ * negative (Robinhood's accounting-style negative). Handles "(-$X)" and
+ * other paren+sign combinations defensively by stripping the paren wrap
+ * before sign handling. Returns 0 for empty/invalid input.
  */
 function parseMoney(raw: string | undefined): number {
   if (!raw) return 0;
-  let s = raw.trim().replace(/[$,]/g, "");
-  if (s.startsWith("(") && s.endsWith(")")) s = "-" + s.slice(1, -1);
+  let s = raw.trim().replace(/[$,\s]/g, "");
+  if (s.startsWith("(") && s.endsWith(")")) {
+    // "(...)" → negative. Strip the parens; if the inner content also has
+    // a leading "-" (e.g. "(-10)"), don't double-negate — just drop the
+    // parens and rely on parseFloat to see the inner sign.
+    const inner = s.slice(1, -1);
+    s = inner.startsWith("-") ? inner : "-" + inner;
+  }
   const num = parseFloat(s);
   return isNaN(num) ? 0 : num;
 }
@@ -103,12 +132,23 @@ function applyTransaction(h: ParsedHolding, tx: TxRow): void {
       // Realize cost on the SOLD shares (qty * avg cost), not via the
       // shares-after-sell multiplication trick that explodes on epsilon.
       const avgCost = h.shares > SHARE_EPSILON ? h.totalCost / h.shares : 0;
-      h.shares -= tx.qty;
-      h.totalCost -= tx.qty * avgCost;
-      // Clamp residual near-zero values to exactly zero
-      if (Math.abs(h.shares) < SHARE_EPSILON) {
+      const sharesAfter = h.shares - tx.qty;
+      if (sharesAfter < -SHARE_EPSILON) {
+        // Oversell: Sell qty > available shares. Almost always means the
+        // CSV is missing earlier Buys (history window truncated, or the
+        // user transferred a position IN without a Buy row). Treat the
+        // position as closed rather than letting negative shares + a
+        // poisoned basis propagate into a later Buy.
         h.shares = 0;
         h.totalCost = 0;
+      } else {
+        h.shares = sharesAfter;
+        h.totalCost -= tx.qty * avgCost;
+        // Clamp residual near-zero values to exactly zero
+        if (Math.abs(h.shares) < SHARE_EPSILON) {
+          h.shares = 0;
+          h.totalCost = 0;
+        }
       }
       break;
     }
@@ -122,10 +162,21 @@ function applyTransaction(h: ParsedHolding, tx: TxRow): void {
     case "SPR": {
       // Spinoff/reissue: paired rows, S-suffix = outgoing, plain = incoming.
       // Cost basis preserved; we just net the share count.
-      // Do NOT clamp to zero here — the share count is transiently zero
-      // BETWEEN the S and non-S rows of a pair, and clamping would wipe
-      // out the cost basis before the incoming row restores the position.
+      // Do NOT clamp to zero on small residuals here — the share count is
+      // transiently zero BETWEEN the S and non-S rows of a pair, and a
+      // clamp would wipe out the cost basis before the incoming row
+      // restores the position.
+      //
+      // However, an unbalanced SPR pair (outgoing row present but
+      // incoming row missing due to a truncated export) would leave
+      // shares strongly negative with cost basis preserved. Treat that
+      // as a closed position so we don't write a phantom-negative
+      // holding that the downstream filter just silently drops.
       h.shares += tx.qtyIsOutgoing ? -tx.qty : tx.qty;
+      if (h.shares < -SHARE_EPSILON) {
+        h.shares = 0;
+        h.totalCost = 0;
+      }
       break;
     }
     case "MRGS":
@@ -166,8 +217,12 @@ export function parseCsv(csvText: string): {
       if (!ticker || !code) continue;
 
       if (!SHARE_CHANGING_CODES.has(code)) {
-        // Track non-cash unknown codes only — CDIV/INT/etc. are expected
-        // cash events and don't need to be flagged.
+        if (!KNOWN_CASH_CODES.has(code)) {
+          // A code we don't recognize at all — could be a new Robinhood
+          // event type that affects shares. Surface it so we can decide
+          // whether to handle it, instead of silently dropping the row.
+          unhandledCodes.add(code);
+        }
         continue;
       }
 
@@ -208,7 +263,20 @@ export function parseCsv(csvText: string): {
       holdings.set(tx.ticker, h);
     }
 
-    // Step 4: surface any unrecognized trans codes (e.g. new Robinhood codes
+    // Step 4: final cleanup. Any ticker that ended at ~zero shares but
+    // with a non-zero cost-basis residue is a closed position with stale
+    // basis — typically from an unbalanced SPR pair (outgoing row with no
+    // incoming) or a MRGS without our paired MRGC handling. Normalize to
+    // an unambiguous closed position so the downstream filter and the
+    // dashboard see (0, 0) consistently.
+    for (const h of holdings.values()) {
+      if (Math.abs(h.shares) < SHARE_EPSILON) {
+        h.shares = 0;
+        h.totalCost = 0;
+      }
+    }
+
+    // Step 5: surface any unrecognized trans codes (e.g. new Robinhood codes
     // we haven't classified yet) as informational warnings, not silent drops.
     if (unhandledCodes.size > 0) {
       errors.push(

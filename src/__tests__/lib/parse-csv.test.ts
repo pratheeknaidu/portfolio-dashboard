@@ -205,6 +205,136 @@ describe("parseCsv — transaction history", () => {
     });
   });
 
+  describe("oversell handling (audit finding: silent corruption)", () => {
+    it("closes position when Sell qty exceeds available shares", () => {
+      // Buy 5, then Sell 10. Possible if earlier history is outside the
+      // export window, or the user transferred a position in via ACAT
+      // without a corresponding Buy row.
+      const text = csv(
+        row("1/1/2024", "OVR", "Buy", "5", "$100", "($500)"),
+        row("2/1/2024", "OVR", "Sell", "10", "$120", "$1200"),
+      );
+      const { holdings } = parseCsv(text);
+      const ovr = holdings.get("OVR");
+      expect(ovr?.shares).toBe(0);
+      expect(ovr?.totalCost).toBe(0);
+    });
+
+    it("does not carry a poisoned basis into a subsequent Buy after oversell", () => {
+      // The dangerous scenario: oversell drives state negative, then a
+      // Buy happens. Without the oversell guard, totalCost stays poisoned
+      // and the user sees a wrong cost basis on the rebuilt position.
+      const text = csv(
+        row("1/1/2024", "PSN", "Buy", "5", "$100", "($500)"),
+        row("2/1/2024", "PSN", "Sell", "10", "$120", "$1200"),
+        row("3/1/2024", "PSN", "Buy", "3", "$50", "($150)"),
+      );
+      const { holdings } = parseCsv(text);
+      const psn = holdings.get("PSN");
+      expect(psn?.shares).toBeCloseTo(3, 6);
+      expect(psn?.totalCost).toBeCloseTo(150, 4);
+    });
+
+    it("closes position on Sell-only with no prior Buy", () => {
+      const text = csv(row("1/1/2024", "SLO", "Sell", "10", "$100", "$1000"));
+      const { holdings } = parseCsv(text);
+      const slo = holdings.get("SLO");
+      // Either absent (shares stayed 0) or explicitly zeroed
+      expect(slo?.shares ?? 0).toBe(0);
+      expect(slo?.totalCost ?? 0).toBe(0);
+    });
+  });
+
+  describe("unbalanced SPR (audit finding: silent data loss)", () => {
+    it("closes position when SPR has outgoing row but no incoming", () => {
+      const text = csv(
+        row("1/1/2024", "USP", "Buy", "10", "$100", "($1000)"),
+        row("3/19/2026", "USP", "SPR", "10S"),
+      );
+      const { holdings } = parseCsv(text);
+      const usp = holdings.get("USP");
+      expect(usp?.shares).toBe(0);
+      expect(usp?.totalCost).toBe(0);
+    });
+
+    it("treats incoming-only SPR as a share addition with zero cost added", () => {
+      // SPR incoming with no outgoing — e.g. cross-ticker spinoff (KO sends,
+      // a new ticker arrives via SPR). The new ticker shows up with $0
+      // basis. Documenting current behavior so a future refactor doesn't
+      // silently change it.
+      const text = csv(row("1/1/2024", "INC", "SPR", "5"));
+      const { holdings } = parseCsv(text);
+      const inc = holdings.get("INC");
+      expect(inc?.shares).toBeCloseTo(5, 6);
+      expect(inc?.totalCost).toBe(0);
+    });
+  });
+
+  describe("unrecognized trans codes (audit finding: dead unhandledCodes)", () => {
+    it("collects unknown trans codes into errors so they aren't silently dropped", () => {
+      const text = csv(
+        row("1/1/2024", "AAA", "Buy", "10", "$100", "($1000)"),
+        row("2/1/2024", "AAA", "FUTURE_CODE", "5"),
+      );
+      const { errors } = parseCsv(text);
+      expect(errors.some((e) => e.includes("FUTURE_CODE"))).toBe(true);
+    });
+
+    it("does NOT flag known cash-only codes (CDIV, INT, SLIP, etc.)", () => {
+      const text = csv(
+        row("1/1/2024", "AAA", "Buy", "10", "$100", "($1000)"),
+        row("2/1/2024", "AAA", "CDIV", "", "", "$25"),
+        row("3/1/2024", "AAA", "DTAX", "", "", "($3)"),
+        row("4/1/2024", "AAA", "SLIP", "", "", "$1.50"),
+        row("5/1/2024", "AAA", "MDIV", "", "", "$2"),
+      );
+      const { errors } = parseCsv(text);
+      expect(errors).toEqual([]);
+    });
+  });
+
+  describe("empty / minimal inputs", () => {
+    it("handles an empty string", () => {
+      const { holdings, errors } = parseCsv("");
+      expect(holdings.size).toBe(0);
+      expect(errors).toEqual([]);
+    });
+
+    it("handles header-only input", () => {
+      const { holdings, errors } = parseCsv(HEADER);
+      expect(holdings.size).toBe(0);
+      expect(errors).toEqual([]);
+    });
+
+    it("handles cash-only rows (no share-changing events)", () => {
+      const text = csv(
+        row("1/1/2024", "AAA", "CDIV", "", "", "$25"),
+        row("2/1/2024", "BBB", "INT", "", "", "$0.50"),
+      );
+      const { holdings, errors } = parseCsv(text);
+      expect(holdings.size).toBe(0);
+      expect(errors).toEqual([]);
+    });
+  });
+
+  describe("parseMoney robustness (audit finding: (-$X) format)", () => {
+    it("handles a price field formatted as (-$10.00) without zeroing the row", () => {
+      // Construct a Sell where Price is the unusual "(-$10.00)" format.
+      // Math.abs in the caller protects the magnitude, but parseMoney
+      // itself must not return NaN→0.
+      const text = csv(
+        row("1/1/2024", "MNY", "Buy", "10", "$100", "($1000)"),
+        row("2/1/2024", "MNY", "Sell", "5", "(-$120)", "$600"),
+      );
+      const { holdings } = parseCsv(text);
+      const mny = holdings.get("MNY");
+      // If parseMoney returned 0 the Sell would be skipped (price <= 0)
+      // and shares would stay at 10. The fix should let the Sell apply.
+      expect(mny?.shares).toBeCloseTo(5, 6);
+      expect(mny?.totalCost).toBeCloseTo(500, 4);
+    });
+  });
+
   describe("positions snapshot format (unaffected by fix)", () => {
     it("still parses Robinhood positions CSV with Average Cost column", () => {
       const text = [
