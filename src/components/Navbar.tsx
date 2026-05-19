@@ -35,7 +35,7 @@ export function Navbar({ onImportClick }: NavbarProps) {
             </svg>
           </div>
           <span className="font-display text-lg font-semibold tracking-tight text-foreground">
-            Emerald
+            Portfolio
           </span>
         </div>
 
