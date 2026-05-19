@@ -6,6 +6,13 @@ import { ImportError, type ImportInput, type ImportResult } from "./types";
 
 export const MAX_HOLDINGS = 200;
 
+/** Match parse-csv's epsilon so closed positions don't leak through. */
+const SHARE_EPSILON = 1e-6;
+
+/** Sanity ceiling: no real equity is priced at $1M/share. Anything above
+ *  this avg cost means cost-basis tracking has gone wrong upstream. */
+const MAX_REASONABLE_AVG_COST = 1_000_000;
+
 export async function importHoldings(uid: string, input: ImportInput): Promise<ImportResult> {
   const { holdings, errors } =
     input.pasteText !== undefined ? parsePastedPositions(input.pasteText)
@@ -19,7 +26,18 @@ export async function importHoldings(uid: string, input: ImportInput): Promise<I
     );
   }
 
-  const parsed = Array.from(holdings.values()).filter((h) => h.shares > 0);
+  const parsed = Array.from(holdings.values()).filter((h) => {
+    if (h.shares <= SHARE_EPSILON) return false;
+    const avgCost = h.totalCost / h.shares;
+    if (!isFinite(avgCost) || Math.abs(avgCost) > MAX_REASONABLE_AVG_COST) {
+      errors.push(
+        `Dropping ${h.ticker}: computed avg cost ${avgCost.toExponential(2)} is implausible — ` +
+        `transaction history may contain unsupported events.`,
+      );
+      return false;
+    }
+    return true;
+  });
   if (parsed.length === 0) {
     return { imported: [], updated: [], removed: [], errors };
   }
