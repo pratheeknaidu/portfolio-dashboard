@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
   const tickerList = tickers.split(",").map((t) => t.trim().toUpperCase());
 
   try {
-    const quotes = await getQuotes(tickerList, range);
-    return NextResponse.json(quotes);
+    const result = await getQuotes(tickerList, range);
+    return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: true, stale: true, message: String(err) }, { status: 502 });
   }

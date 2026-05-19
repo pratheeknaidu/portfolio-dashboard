@@ -11,8 +11,11 @@ import { MetricCard } from "@/components/MetricCard";
 import { AllocationCard } from "@/components/AllocationCard";
 import { MoversCard } from "@/components/MoversCard";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/lib/toast-context";
 import { isMarketOpen } from "@/lib/market-hours";
 import { CsvImportModal } from "@/components/CsvImportModal";
+import { EmptyPortfolio } from "@/components/EmptyPortfolio";
+import { FailedTickersChip } from "@/components/FailedTickersChip";
 import type { Holding, Quote, PortfolioItem, TimeRange, SizingMode } from "@/types";
 
 function fmtCurrency(n: number): string {
@@ -28,14 +31,22 @@ function fmtCurrencySigned(n: number): string {
   return n >= 0 ? `+${formatted}` : `−${formatted}`;
 }
 
+interface QuotesResponse {
+  quotes: Record<string, Quote>;
+  failed: string[];
+}
+
 export default function DashboardPage() {
   const { getIdToken } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [range, setRange] = useState<TimeRange>("1D");
   const [sizing, setSizing] = useState<SizingMode>("equity");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [tileRect, setTileRect] = useState<TileRect | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
+  const [failedTickers, setFailedTickers] = useState<string[]>([]);
 
   const handleSelect = useCallback(
     (item: PortfolioItem | null, rect: TileRect | null) => {
@@ -61,58 +72,64 @@ export default function DashboardPage() {
 
     const headers = { Authorization: `Bearer ${token}` };
 
-    const holdingsRes = await fetch("/api/portfolio", { headers });
-    if (!holdingsRes.ok) {
-      setItems([]);
-      return;
-    }
-    const holdings: Holding[] = await holdingsRes.json();
-    if (!Array.isArray(holdings) || holdings.length === 0) {
-      setItems([]);
-      return;
-    }
+    try {
+      const holdingsRes = await fetch("/api/portfolio", { headers });
+      if (!holdingsRes.ok) {
+        toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
+        setItems([]); setHasFetched(true); return;
+      }
+      const holdings: Holding[] = await holdingsRes.json();
+      if (!Array.isArray(holdings) || holdings.length === 0) { setItems([]); setHasFetched(true); return; }
 
-    const tickers = holdings.map((h) => h.ticker).join(",");
-    const quotesUrl =
-      range === "ALL"
+      const tickers = holdings.map((h) => h.ticker).join(",");
+      const quotesUrl = range === "ALL"
         ? `/api/quotes?tickers=${tickers}`
         : `/api/quotes?tickers=${tickers}&range=${range}`;
-    const quotesRes = await fetch(quotesUrl, { headers });
-    const quotes: Record<string, Quote> = await quotesRes.json();
+      const quotesRes = await fetch(quotesUrl, { headers });
+      if (!quotesRes.ok) {
+        toast.error(`Quotes service is unavailable. Showing last-known values.`);
+        setHasFetched(true);
+        return;
+      }
+      const { quotes, failed }: QuotesResponse = await quotesRes.json();
+      setFailedTickers(failed ?? []);
 
-    const merged: PortfolioItem[] = holdings
-      .filter((h) => quotes[h.ticker])
-      .map((h) => {
-        const q = quotes[h.ticker];
-        const marketValue = h.shares * q.price;
-        const costBasis = h.shares * h.avgCost;
-        const totalPL = marketValue - costBasis;
-        const totalPLPercent = (totalPL / costBasis) * 100;
-        const quote: Quote =
-          range === "ALL"
+      const merged: PortfolioItem[] = holdings
+        .filter((h) => quotes[h.ticker])
+        .map((h) => {
+          const q = quotes[h.ticker];
+          const marketValue = h.shares * q.price;
+          const costBasis = h.shares * h.avgCost;
+          const totalPL = marketValue - costBasis;
+          const totalPLPercent = (totalPL / costBasis) * 100;
+          const quote: Quote = range === "ALL"
             ? { ...q, change: q.price - h.avgCost, changePercent: totalPLPercent }
             : q;
-        return {
-          ...h,
-          quote,
-          marketValue,
-          totalPL,
-          totalPLPercent,
-        };
+          return {
+            ...h,
+            quote,
+            marketValue,
+            totalPL,
+            totalPLPercent,
+          };
+        });
+
+      setItems(merged);
+      setHasFetched(true);
+
+      const totalValue = merged.reduce((sum, i) => sum + i.marketValue, 0);
+      const holdingsMap = Object.fromEntries(merged.map((i) => [i.ticker, i.marketValue]));
+      await fetch("/api/snapshot", {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ totalValue, holdings: holdingsMap }),
       });
-
-    setItems(merged);
-
-    const totalValue = merged.reduce((sum, i) => sum + i.marketValue, 0);
-    const holdingsMap = Object.fromEntries(
-      merged.map((i) => [i.ticker, i.marketValue]),
-    );
-    await fetch("/api/snapshot", {
-      method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ totalValue, holdings: holdingsMap }),
-    });
-  }, [getIdToken, range]);
+    } catch (err) {
+      console.error("fetchPortfolio failed:", err);
+      toast.error("Network error — couldn't refresh portfolio.");
+      setHasFetched(true);
+    }
+  }, [getIdToken, range, toast]);
 
   useEffect(() => {
     fetchPortfolio();
@@ -175,12 +192,13 @@ export default function DashboardPage() {
                 <TimeRangeToggle selected={range} onChange={setRange} />
               </div>
             </div>
+            <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
             <div className="h-[440px] md:h-[520px] relative">
-              <Treemap
-                items={items}
-                sizing={sizing}
-                onSelect={handleSelect}
-              />
+              {hasFetched && items.length === 0 ? (
+                <EmptyPortfolio onImportClick={() => setShowImport(true)} />
+              ) : (
+                <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
+              )}
             </div>
             <TreemapTooltip item={selectedItem} tileRect={tileRect} />
           </div>

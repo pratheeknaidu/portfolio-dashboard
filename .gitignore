@@ -43,3 +43,16 @@ ui-debug.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code session config
+.claude/
+
+# graphify - commit the outputs but not the derived/per-user state
+graphify-out/cache/
+graphify-out/manifest.json
+graphify-out/cost.json
+graphify-out/.graphify_python
+
+# personal data dumps left in repo root
+/latest.csv
+/4a245e8e-aa48-5db6-9b60-ff95426f8061.csv

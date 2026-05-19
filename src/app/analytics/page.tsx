@@ -6,6 +6,7 @@ import { SectorChart } from "@/components/SectorChart";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/lib/toast-context";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -13,6 +14,7 @@ import type { Holding, Quote, PortfolioItem, Snapshot } from "@/types";
 
 export default function AnalyticsPage() {
   const { getIdToken } = useAuth();
+  const toast = useToast();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [showImport, setShowImport] = useState(false);
@@ -25,39 +27,50 @@ export default function AnalyticsPage() {
     if (!token) return;
     const headers = { Authorization: `Bearer ${token}` };
 
-    const holdingsRes = await fetch("/api/portfolio", { headers });
-    if (!holdingsRes.ok) return;
-    const holdings: Holding[] = await holdingsRes.json();
+    try {
+      const holdingsRes = await fetch("/api/portfolio", { headers });
+      if (!holdingsRes.ok) {
+        toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
+        return;
+      }
+      const holdings: Holding[] = await holdingsRes.json();
 
-    if (Array.isArray(holdings) && holdings.length > 0) {
-      const tickers = holdings.map((h) => h.ticker).join(",");
-      const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`, { headers });
-      const quotes: Record<string, Quote> = await quotesRes.json();
+      if (Array.isArray(holdings) && holdings.length > 0) {
+        const tickers = holdings.map((h) => h.ticker).join(",");
+        const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`, { headers });
+        if (!quotesRes.ok) {
+          toast.error("Quotes service is unavailable.");
+        } else {
+          const { quotes }: { quotes: Record<string, Quote>; failed: string[] } = await quotesRes.json();
+          setItems(
+            holdings.filter((h) => quotes[h.ticker]).map((h) => {
+              const q = quotes[h.ticker];
+              const mv = h.shares * q.price;
+              const cb = h.shares * h.avgCost;
+              return {
+                ...h,
+                quote: q,
+                marketValue: mv,
+                totalPL: mv - cb,
+                totalPLPercent: ((mv - cb) / cb) * 100,
+              };
+            })
+          );
+        }
+      } else {
+        setItems([]);
+      }
 
-      setItems(
-        holdings.filter((h) => quotes[h.ticker]).map((h) => {
-          const q = quotes[h.ticker];
-          const mv = h.shares * q.price;
-          const cb = h.shares * h.avgCost;
-          return {
-            ...h,
-            quote: q,
-            marketValue: mv,
-            totalPL: mv - cb,
-            totalPLPercent: ((mv - cb) / cb) * 100,
-          };
-        })
-      );
-    } else {
-      setItems([]);
+      const snapshotsRes = await fetch("/api/snapshot", { headers });
+      if (snapshotsRes.ok) {
+        const data = await snapshotsRes.json();
+        setSnapshots(data);
+      }
+    } catch (err) {
+      console.error("Analytics fetchData failed:", err);
+      toast.error("Network error — couldn't load analytics.");
     }
-
-    const snapshotsRes = await fetch("/api/snapshot", { headers });
-    if (snapshotsRes.ok) {
-      const data = await snapshotsRes.json();
-      setSnapshots(data);
-    }
-  }, [getIdToken]);
+  }, [getIdToken, toast]);
 
   useEffect(() => {
     fetchData();
