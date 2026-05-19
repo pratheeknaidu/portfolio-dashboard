@@ -8,7 +8,11 @@ jest.mock("@nivo/treemap", () => ({
     <div data-testid="treemap">
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {data.children.map((c: any) => (
-        <div key={c.id} data-testid={`tile-${c.id}`}>
+        <div
+          key={c.id}
+          data-testid={`tile-${c.id}`}
+          data-value={c.value}
+        >
           {c.id}
         </div>
       ))}
@@ -42,5 +46,18 @@ describe("Treemap", () => {
     render(<Treemap items={mockItems} sizing="equity" onSelect={jest.fn()} />);
     const treemap = screen.getByTestId("treemap");
     expect(treemap).toBeInTheDocument();
+  });
+
+  it("sizes profit-mode tiles by abs($ P/L for the selected range), not lifetime P/L", () => {
+    // AAPL: shares 50, change +2.3  → period $ P/L = +115
+    // MSFT: shares 30, change -3.5  → period $ P/L = -105 → abs 105
+    // (Lifetime totalPL is AAPL 2135 vs MSFT 285 — a totally different order
+    //  of magnitude. If we regressed back to totalPL the values below would
+    //  fail loudly.)
+    render(<Treemap items={mockItems} sizing="profit" onSelect={jest.fn()} />);
+    const aapl = Number(screen.getByTestId("tile-AAPL").getAttribute("data-value"));
+    const msft = Number(screen.getByTestId("tile-MSFT").getAttribute("data-value"));
+    expect(aapl).toBeCloseTo(115, 5);
+    expect(msft).toBeCloseTo(105, 5);
   });
 });
