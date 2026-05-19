@@ -42,26 +42,32 @@ export function TreemapTooltip({ item, tileRect }: Props) {
 
   return (
     <div
-      className="fixed z-50 bg-surface-card border border-surface-border rounded-lg p-4 shadow-xl text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
+      className="bento-card fixed z-50 p-5 text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
       style={{ top, left, width: TOOLTIP_W }}
     >
-      <div className="font-bold text-white text-base">{item.companyName}</div>
-      <div className="text-gray-400 mb-2">{item.ticker} &middot; {item.sector}</div>
-      <div className="grid grid-cols-2 gap-y-1">
-        <span className="text-gray-400">Shares</span>
-        <span className="text-right">{item.shares} shares</span>
-        <span className="text-gray-400">Avg Cost</span>
-        <span className="text-right">{fmt(item.avgCost)}</span>
-        <span className="text-gray-400">Price</span>
-        <span className="text-right">{fmt(item.quote.price)}</span>
-        <span className="text-gray-400">Market Value</span>
-        <span className="text-right">{fmt(item.marketValue)}</span>
-        <span className="text-gray-400">Total P&L</span>
-        <span className={`text-right ${item.totalPL >= 0 ? "text-gain" : "text-loss"}`}>
+      <div className="font-display text-base font-semibold text-foreground">
+        {item.companyName}
+      </div>
+      <div className="text-xs text-muted-foreground mb-3 mt-0.5">
+        <span className="font-mono">{item.ticker}</span>
+        <span className="mx-1.5 opacity-40">·</span>
+        {item.sector}
+      </div>
+      <div className="grid grid-cols-2 gap-y-1.5 text-xs">
+        <span className="text-muted-foreground">Shares</span>
+        <span className="text-right font-mono text-foreground">{item.shares}</span>
+        <span className="text-muted-foreground">Avg Cost</span>
+        <span className="text-right font-mono text-foreground">{fmt(item.avgCost)}</span>
+        <span className="text-muted-foreground">Price</span>
+        <span className="text-right font-mono text-foreground">{fmt(item.quote.price)}</span>
+        <span className="text-muted-foreground">Market Value</span>
+        <span className="text-right font-mono text-foreground">{fmt(item.marketValue)}</span>
+        <span className="text-muted-foreground">Total P&L</span>
+        <span className={`text-right font-mono ${item.totalPL >= 0 ? "text-positive" : "text-negative"}`}>
           {fmt(item.totalPL)} ({item.totalPLPercent.toFixed(1)}%)
         </span>
-        <span className="text-gray-400">Day Change</span>
-        <span className={`text-right ${dayChange >= 0 ? "text-gain" : "text-loss"}`}>
+        <span className="text-muted-foreground">Day Change</span>
+        <span className={`text-right font-mono ${dayChange >= 0 ? "text-positive" : "text-negative"}`}>
           {fmt(dayChange)} ({item.quote.changePercent.toFixed(2)}%)
         </span>
       </div>

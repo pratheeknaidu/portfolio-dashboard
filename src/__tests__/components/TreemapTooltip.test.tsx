@@ -15,7 +15,9 @@ describe("TreemapTooltip", () => {
       />
     );
     expect(screen.getByText("Apple Inc.")).toBeInTheDocument();
-    expect(screen.getByText(/50 shares/)).toBeInTheDocument();
+    // "Shares" label appears next to a "50" value cell after the redesign
+    expect(screen.getByText("Shares")).toBeInTheDocument();
+    expect(screen.getByText("50")).toBeInTheDocument();
     expect(screen.getByText(/\$2,135/)).toBeInTheDocument();
   });
 

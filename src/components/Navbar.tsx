@@ -13,26 +13,111 @@ export function Navbar({ onImportClick }: NavbarProps) {
   const { signOut } = useAuth();
   const marketOpen = isMarketOpen();
 
+  const tabs: { href: string; label: string }[] = [
+    { href: "/", label: "Dashboard" },
+    { href: "/analytics", label: "Analytics" },
+  ];
+
   return (
-    <nav className="h-14 bg-surface-card border-b border-surface-border flex items-center px-6 justify-between">
-      <div className="flex items-center gap-6">
-        <span className="text-lg font-bold text-white">Portfolio</span>
-        <Link href="/" className={pathname === "/" ? "text-accent" : "text-gray-400 hover:text-gray-200"}>
-          Dashboard
-        </Link>
-        <Link href="/analytics" className={pathname === "/analytics" ? "text-accent" : "text-gray-400 hover:text-gray-200"}>
-          Analytics
-        </Link>
+    <nav className="h-16 flex items-center px-6 md:px-8 justify-between border-b border-border/40 backdrop-blur-md bg-background/40">
+      <div className="flex items-center gap-8">
+        <div className="flex items-center gap-3">
+          <div className="brand-mark h-10 w-10 rounded-xl flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-primary-foreground">
+              <path
+                d="M4 18L9 11L13 14L20 6"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="20" cy="6" r="1.6" fill="currentColor" />
+            </svg>
+          </div>
+          <span className="font-display text-lg font-semibold tracking-tight text-foreground">
+            Emerald
+          </span>
+        </div>
+
+        <div className="hidden md:inline-flex items-center gap-1 bg-surface-elevated/60 border border-border/60 rounded-full p-1">
+          {tabs.map((tab) => {
+            const active = pathname === tab.href;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                  active
+                    ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-sm shadow-primary/20"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex items-center gap-4">
-        <span className={`text-xs ${marketOpen ? "text-gain" : "text-gray-500"}`}>
+
+      <div className="flex items-center gap-2.5">
+        <span
+          className={`hidden sm:inline-flex items-center gap-2 h-10 px-3.5 rounded-full text-xs font-medium tracking-wide border ${
+            marketOpen
+              ? "bg-positive/10 text-positive border-positive/30"
+              : "bg-surface-elevated/60 text-muted-foreground border-border/60"
+          }`}
+        >
+          <span className="relative flex h-2 w-2 items-center justify-center">
+            {marketOpen && (
+              <span className="absolute inline-flex h-full w-full rounded-full bg-positive/60 animate-ping" />
+            )}
+            <span
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                marketOpen ? "bg-positive" : "bg-muted-foreground/60"
+              }`}
+            />
+          </span>
           {marketOpen ? "Market Open" : "Market Closed"}
         </span>
-        <button onClick={onImportClick} className="px-3 py-1.5 bg-accent-dark text-white text-sm rounded hover:bg-accent">
-          Import CSV
+
+        <button
+          onClick={onImportClick}
+          className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full text-sm font-medium text-primary-foreground bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-px transition-all"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-4 w-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 16V4M12 4l-4 4M12 4l4 4" />
+            <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+          </svg>
+          Import
         </button>
-        <button onClick={signOut} className="text-gray-400 hover:text-gray-200 text-sm">
-          Sign Out
+
+        <button
+          onClick={signOut}
+          aria-label="Sign out"
+          title="Sign out"
+          className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-surface-elevated/60 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="h-4 w-4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
         </button>
       </div>
     </nav>

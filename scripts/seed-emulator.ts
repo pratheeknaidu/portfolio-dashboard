@@ -17,26 +17,77 @@ const auth = getAuth(app);
 
 const SEED_UID = SANDBOX_USER_UID;
 
+// Diversified 16-holding portfolio across 9 sectors. Avg costs are mixed
+// relative to the mock pricing model (base = 30 + hash%470 + sin drift), so
+// the dashboard shows a realistic blend of winners and losers — not all green.
 const holdings = [
-  { ticker: "AAPL", companyName: "Apple Inc.", sector: "Technology", shares: 50, avgCost: 142.80 },
-  { ticker: "MSFT", companyName: "Microsoft Corp.", sector: "Technology", shares: 30, avgCost: 280.50 },
-  { ticker: "GOOGL", companyName: "Alphabet Inc.", sector: "Technology", shares: 15, avgCost: 130.25 },
-  { ticker: "AMZN", companyName: "Amazon.com Inc.", sector: "Consumer Cyclical", shares: 20, avgCost: 145.00 },
-  { ticker: "XOM", companyName: "Exxon Mobil Corp.", sector: "Energy", shares: 100, avgCost: 90.00 },
-  { ticker: "JNJ", companyName: "Johnson & Johnson", sector: "Healthcare", shares: 40, avgCost: 155.00 },
-  { ticker: "JPM", companyName: "JPMorgan Chase", sector: "Financial Services", shares: 25, avgCost: 170.00 },
-  { ticker: "NVDA", companyName: "NVIDIA Corp.", sector: "Technology", shares: 10, avgCost: 450.00 },
+  // Technology — large, concentrated
+  { ticker: "AAPL",  companyName: "Apple Inc.",          sector: "Technology",            shares: 80, avgCost: 142.80 },
+  { ticker: "MSFT",  companyName: "Microsoft Corp.",     sector: "Technology",            shares: 40, avgCost: 310.50 },
+  { ticker: "NVDA",  companyName: "NVIDIA Corp.",        sector: "Technology",            shares: 35, avgCost: 480.00 },
+  { ticker: "GOOGL", companyName: "Alphabet Inc.",       sector: "Technology",            shares: 30, avgCost: 145.25 },
+
+  // Consumer Cyclical
+  { ticker: "AMZN",  companyName: "Amazon.com Inc.",     sector: "Consumer Cyclical",     shares: 25, avgCost: 175.00 },
+  { ticker: "TSLA",  companyName: "Tesla Inc.",          sector: "Consumer Cyclical",     shares: 22, avgCost: 240.00 },
+  { ticker: "HD",    companyName: "Home Depot Inc.",     sector: "Consumer Cyclical",     shares: 12, avgCost: 360.00 },
+
+  // Financial Services
+  { ticker: "JPM",   companyName: "JPMorgan Chase",      sector: "Financial Services",    shares: 45, avgCost: 175.00 },
+  { ticker: "V",     companyName: "Visa Inc.",           sector: "Financial Services",    shares: 28, avgCost: 245.00 },
+  { ticker: "BRK",   companyName: "Berkshire Hathaway",  sector: "Financial Services",    shares: 18, avgCost: 395.00 },
+
+  // Healthcare
+  { ticker: "UNH",   companyName: "UnitedHealth Group",  sector: "Healthcare",            shares: 14, avgCost: 510.00 },
+  { ticker: "JNJ",   companyName: "Johnson & Johnson",   sector: "Healthcare",            shares: 50, avgCost: 158.00 },
+
+  // Consumer Defensive
+  { ticker: "PG",    companyName: "Procter & Gamble",    sector: "Consumer Defensive",    shares: 32, avgCost: 152.00 },
+  { ticker: "KO",    companyName: "Coca-Cola Co.",       sector: "Consumer Defensive",    shares: 60, avgCost: 58.00 },
+
+  // Communication Services
+  { ticker: "META",  companyName: "Meta Platforms",      sector: "Communication Services", shares: 18, avgCost: 320.00 },
+  { ticker: "NFLX",  companyName: "Netflix Inc.",        sector: "Communication Services", shares: 10, avgCost: 480.00 },
+
+  // Energy / Industrials / Utilities / Real Estate — single positions
+  { ticker: "XOM",   companyName: "Exxon Mobil Corp.",   sector: "Energy",                shares: 70, avgCost: 105.00 },
+  { ticker: "CAT",   companyName: "Caterpillar Inc.",    sector: "Industrials",           shares: 15, avgCost: 285.00 },
+  { ticker: "NEE",   companyName: "NextEra Energy",      sector: "Utilities",             shares: 55, avgCost: 72.00 },
+  { ticker: "PLD",   companyName: "Prologis Inc.",       sector: "Real Estate",           shares: 35, avgCost: 118.00 },
 ];
 
-const snapshots = [
-  { date: "2026-03-20", totalValue: 44500 },
-  { date: "2026-03-21", totalValue: 45200 },
-  { date: "2026-03-22", totalValue: 44800 },
-  { date: "2026-03-23", totalValue: 46100 },
-  { date: "2026-03-24", totalValue: 47300 },
-  { date: "2026-03-25", totalValue: 46800 },
-  { date: "2026-03-26", totalValue: 48230 },
-];
+// Generate 90 days of snapshots with organic-looking drift: gentle upward
+// trend with overlaid sin waves to mimic market volatility. The hero card
+// sparkline reads from these. The dashboard will overwrite today's snapshot
+// on first load with the real computed total.
+function generateSnapshots(days: number): { date: string; totalValue: number }[] {
+  const start = 175_000;
+  const end = 198_500;
+  const out: { date: string; totalValue: number }[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const day = date.getDay();
+    // Skip weekends — markets are closed, no snapshots recorded.
+    if (day === 0 || day === 6) continue;
+
+    const t = (days - 1 - i) / (days - 1);
+    const trend = start + (end - start) * t;
+    const slow = Math.sin(t * Math.PI * 2 + 0.7) * 4_200;
+    const med = Math.sin(t * Math.PI * 8 + 1.3) * 1_800;
+    const fast = Math.sin(t * Math.PI * 24 + 0.2) * 650;
+    const totalValue = Math.round(trend + slow + med + fast);
+
+    out.push({
+      date: date.toISOString().split("T")[0],
+      totalValue,
+    });
+  }
+  return out;
+}
 
 async function seed() {
   console.log("Creating seed user...");
@@ -56,7 +107,7 @@ async function seed() {
     console.log("User already exists, password refreshed.");
   }
 
-  console.log("Writing holdings...");
+  console.log(`Writing ${holdings.length} holdings across ${new Set(holdings.map((h) => h.sector)).size} sectors...`);
   for (const h of holdings) {
     await db.collection("users").doc(SEED_UID).collection("holdings").doc(h.ticker).set({
       ...h,
@@ -64,12 +115,16 @@ async function seed() {
     });
   }
 
-  console.log("Writing snapshots...");
+  const snapshots = generateSnapshots(90);
+  console.log(`Writing ${snapshots.length} daily snapshots (90-day window, weekdays only)...`);
   for (const s of snapshots) {
     await db.collection("users").doc(SEED_UID).collection("snapshots").doc(s.date).set(s);
   }
 
-  console.log("Seed complete. Holdings:", holdings.length, "Snapshots:", snapshots.length);
+  console.log("Seed complete.");
+  console.log(`  Holdings:   ${holdings.length}`);
+  console.log(`  Sectors:    ${new Set(holdings.map((h) => h.sector)).size}`);
+  console.log(`  Snapshots:  ${snapshots.length} (${snapshots[0].date} → ${snapshots[snapshots.length - 1].date})`);
   process.exit(0);
 }
 

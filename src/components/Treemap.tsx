@@ -6,9 +6,12 @@ import type { TileRect } from "./TreemapTooltip";
 function getColor(changePercent: number): string {
   const MAX_MAGNITUDE = 3;
   const t = Math.min(Math.abs(changePercent) / MAX_MAGNITUDE, 1);
-  const lightness = 50 - t * 28;
-  const hue = changePercent >= 0 ? 142 : 0;
-  return `hsl(${hue}, 55%, ${lightness}%)`;
+  // Lightness ramps darker as magnitude grows; chroma grows for more saturation
+  // at the extremes. Hues mirror the --positive (155) and --negative (25) tokens.
+  const lightness = 0.62 - t * 0.22;
+  const chroma = 0.08 + t * 0.13;
+  const hue = changePercent >= 0 ? 155 : 25;
+  return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} ${hue})`;
 }
 
 function sizeOf(item: PortfolioItem, sizing: SizingMode): number {
@@ -53,8 +56,9 @@ export function Treemap({ items, sizing, onSelect }: Props) {
           const tooSmall = node.width < 50 || node.height < 30;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const d = node.data as any;
-          const pct = d.changePercent?.toFixed(1) ?? "0.0";
-          const sign = Number(pct) >= 0 ? "+" : "";
+          const raw = Number(d.changePercent ?? 0);
+          const pct = Math.abs(raw).toFixed(1);
+          const sign = raw > 0 ? "+" : raw < 0 ? "−" : "";
           return (
             <div
               style={{
@@ -70,6 +74,15 @@ export function Treemap({ items, sizing, onSelect }: Props) {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
+                borderRadius: 10,
+                boxShadow: "inset 0 1px 0 0 oklch(1 0 0 / 0.08)",
+                transition: "transform 150ms ease, filter 150ms ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.filter = "brightness(1.08)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.filter = "brightness(1)";
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -79,10 +92,29 @@ export function Treemap({ items, sizing, onSelect }: Props) {
             >
               {!tooSmall && (
                 <>
-                  <span style={{ color: "#fff", fontWeight: 700, fontSize: Math.min(14, node.width / 6), lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      color: "oklch(0.98 0.01 90)",
+                      fontFamily: "var(--font-display), system-ui, sans-serif",
+                      fontWeight: 600,
+                      letterSpacing: "-0.01em",
+                      fontSize: Math.min(15, node.width / 6),
+                      lineHeight: 1.15,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {node.id}
                   </span>
-                  <span style={{ color: "rgba(255,255,255,0.85)", fontSize: Math.min(11, node.width / 8), lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      color: "oklch(1 0 0 / 0.78)",
+                      fontFamily: "var(--font-mono), ui-monospace, monospace",
+                      fontSize: Math.min(11, node.width / 8.5),
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                      marginTop: 2,
+                    }}
+                  >
                     {sign}{pct}%
                   </span>
                 </>
