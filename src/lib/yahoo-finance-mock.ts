@@ -34,18 +34,26 @@ function rangeToDaysAgo(range: TimeRange): number {
 }
 
 const KNOWN: Record<string, { name: string; sector: string }> = {
-  AAPL:  { name: "Apple Inc.",          sector: "Technology" },
-  MSFT:  { name: "Microsoft Corp.",     sector: "Technology" },
-  GOOGL: { name: "Alphabet Inc.",       sector: "Technology" },
-  AMZN:  { name: "Amazon.com Inc.",     sector: "Consumer Cyclical" },
-  NVDA:  { name: "NVIDIA Corp.",        sector: "Technology" },
-  JPM:   { name: "JPMorgan Chase",      sector: "Financial Services" },
-  JNJ:   { name: "Johnson & Johnson",   sector: "Healthcare" },
-  XOM:   { name: "Exxon Mobil Corp.",   sector: "Energy" },
-  TSLA:  { name: "Tesla Inc.",          sector: "Consumer Cyclical" },
-  META:  { name: "Meta Platforms",      sector: "Communication Services" },
-  BRK:   { name: "Berkshire Hathaway",  sector: "Financial Services" },
-  V:     { name: "Visa Inc.",           sector: "Financial Services" },
+  AAPL:  { name: "Apple Inc.",            sector: "Technology" },
+  MSFT:  { name: "Microsoft Corp.",       sector: "Technology" },
+  GOOGL: { name: "Alphabet Inc.",         sector: "Technology" },
+  AMZN:  { name: "Amazon.com Inc.",       sector: "Consumer Cyclical" },
+  NVDA:  { name: "NVIDIA Corp.",          sector: "Technology" },
+  JPM:   { name: "JPMorgan Chase",        sector: "Financial Services" },
+  JNJ:   { name: "Johnson & Johnson",     sector: "Healthcare" },
+  XOM:   { name: "Exxon Mobil Corp.",     sector: "Energy" },
+  TSLA:  { name: "Tesla Inc.",            sector: "Consumer Cyclical" },
+  META:  { name: "Meta Platforms",        sector: "Communication Services" },
+  BRK:   { name: "Berkshire Hathaway",    sector: "Financial Services" },
+  V:     { name: "Visa Inc.",             sector: "Financial Services" },
+  UNH:   { name: "UnitedHealth Group",    sector: "Healthcare" },
+  PG:    { name: "Procter & Gamble",      sector: "Consumer Defensive" },
+  KO:    { name: "Coca-Cola Co.",         sector: "Consumer Defensive" },
+  NEE:   { name: "NextEra Energy",        sector: "Utilities" },
+  CAT:   { name: "Caterpillar Inc.",      sector: "Industrials" },
+  HD:    { name: "Home Depot Inc.",       sector: "Consumer Cyclical" },
+  PLD:   { name: "Prologis Inc.",         sector: "Real Estate" },
+  NFLX:  { name: "Netflix Inc.",          sector: "Communication Services" },
 };
 
 export function getMockQuotes(

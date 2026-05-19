@@ -1,7 +1,29 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+
+const displayFont = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const bodyFont = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const monoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Portfolio Dashboard",
@@ -10,8 +32,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-surface-bg text-gray-200 min-h-screen font-sans">
+    <html
+      lang="en"
+      className={`dark ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
+    >
+      <body className="min-h-screen">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

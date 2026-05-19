@@ -10,15 +10,15 @@ interface Props {
 
 export function TimeRangeToggle({ selected, onChange }: Props) {
   return (
-    <div className="flex gap-1 bg-surface-card rounded-lg p-1">
+    <div className="inline-flex gap-0.5 bg-surface-elevated/60 border border-border/60 rounded-full p-1">
       {ranges.map((r) => (
         <button
           key={r}
           onClick={() => onChange(r)}
-          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+          className={`px-2.5 py-1 text-[11px] font-mono font-medium rounded-full transition-all ${
             selected === r
-              ? "bg-accent text-white"
-              : "text-gray-400 hover:text-gray-200"
+              ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-sm shadow-primary/20"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {r}

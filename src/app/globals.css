@@ -1,3 +1,110 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.875rem;
+
+    --background: oklch(0.18 0.02 165);
+    --foreground: oklch(0.96 0.02 90);
+
+    --surface: oklch(0.22 0.025 165);
+    --surface-elevated: oklch(0.26 0.03 165);
+
+    --card: var(--surface);
+    --popover: oklch(0.24 0.028 165);
+
+    --primary: oklch(0.55 0.13 162);
+    --primary-foreground: oklch(0.98 0.01 90);
+
+    --muted: oklch(0.28 0.03 165);
+    --muted-foreground: oklch(0.72 0.03 120);
+
+    --gold: oklch(0.78 0.13 85);
+    --gold-foreground: oklch(0.18 0.02 165);
+
+    --positive: oklch(0.72 0.17 155);
+    --negative: oklch(0.66 0.21 25);
+
+    --border: oklch(0.32 0.03 165 / 0.6);
+    --input: oklch(0.3 0.03 165);
+    --ring: oklch(0.55 0.13 162);
+  }
+
+  html,
+  body {
+    color: var(--foreground);
+    background-color: var(--background);
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, oklch(0.30 0.07 162 / 0.35), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, oklch(0.35 0.08 85 / 0.18), transparent 60%),
+      var(--background);
+    background-attachment: fixed;
+    font-family: var(--font-body), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .bento-card {
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--surface-elevated) 85%, transparent),
+      color-mix(in oklab, var(--surface) 95%, transparent)
+    );
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 8px);
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.04),
+      0 30px 60px -30px oklch(0 0 0 / 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .brand-mark {
+    background: linear-gradient(
+      135deg,
+      var(--primary) 0%,
+      color-mix(in oklab, var(--gold) 80%, transparent) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.15),
+      0 6px 20px -8px oklch(0.55 0.13 162 / 0.5);
+  }
+
+  .delta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-weight: 500;
+  }
+
+  .delta-pill-positive {
+    background-color: color-mix(in oklab, var(--positive) 15%, transparent);
+    color: var(--positive);
+  }
+
+  .delta-pill-negative {
+    background-color: color-mix(in oklab, var(--negative) 15%, transparent);
+    color: var(--negative);
+  }
+
+  .num-fade {
+    transition: color 200ms ease, opacity 200ms ease;
+  }
+}
