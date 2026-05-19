@@ -66,6 +66,35 @@ export default function DashboardPage() {
     setTileRect(null);
   }, []);
 
+  // Dismiss the pinned tooltip on Escape OR any click outside a tile.
+  // Tile onClick handlers call stopPropagation, so clicks that reach the
+  // document listener are guaranteed to be outside the treemap — that
+  // covers Sidebar / Navbar / Hero card / empty-state / etc. without
+  // each parent needing its own onClick={dismiss}.
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissSelection();
+    };
+    const handleClickOutside = () => dismissSelection();
+
+    document.addEventListener("keydown", handleEsc);
+    // Defer adding the click listener by one tick so the click that
+    // SELECTED the tile (and bubbled up to document) doesn't immediately
+    // re-dismiss it.
+    const timer = window.setTimeout(
+      () => document.addEventListener("click", handleClickOutside),
+      0,
+    );
+
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+      document.removeEventListener("click", handleClickOutside);
+      window.clearTimeout(timer);
+    };
+  }, [selectedItem, dismissSelection]);
+
   const fetchPortfolio = useCallback(async () => {
     const token = await getIdToken();
     if (!token) return;
@@ -176,7 +205,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 2: Treemap (col-12) wrapped in bento */}
-          <div className="bento-card p-5 mb-4" onClick={dismissSelection}>
+          {/* Tooltip dismiss is handled at document level (see useEffect
+              above) so clicks anywhere outside a tile — including on the
+              Sidebar, Navbar, or other cards — also dismiss. */}
+          <div className="bento-card p-5 mb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="font-display text-lg font-semibold text-foreground">
