@@ -4,6 +4,7 @@ import type { RecommendationKey, ValuationData } from "@/types";
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const cache = new Map<string, { data: Record<string, ValuationData>; timestamp: number }>();
+const CACHE_TTL = 60_000;
 
 export function clearCache() {
   cache.clear();
@@ -107,6 +108,12 @@ async function fetchOne(ticker: string): Promise<ValuationData | undefined> {
 }
 
 export async function getValuations(tickers: string[]): Promise<Record<string, ValuationData>> {
+  const cacheKey = [...tickers].sort().join(",") + "_valuations";
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
   const results: Record<string, ValuationData> = {};
 
   await Promise.allSettled(
@@ -120,5 +127,6 @@ export async function getValuations(tickers: string[]): Promise<Record<string, V
     })
   );
 
+  cache.set(cacheKey, { data: results, timestamp: Date.now() });
   return results;
 }
