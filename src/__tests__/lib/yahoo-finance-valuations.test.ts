@@ -240,4 +240,16 @@ describe("SANDBOX_MODE short-circuit", () => {
     expect(result.SPY).toBeUndefined();  // SPY is in NO_COVERAGE
     expect(result.AAPL.valuationSource).toBe("both");
   });
+
+  it("routes NO_FV_DESCRIPTION tickers through path 2 (analyst_target source, no FV description)", async () => {
+    process.env.SANDBOX_MODE = "true";
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    const result = await getValuations(["PLTR"]);
+
+    expect(result.PLTR).toBeDefined();
+    expect(result.PLTR.valuationSource).toBe("analyst_target");
+    expect(result.PLTR.fairValueDescription).toBeUndefined();
+    expect(result.PLTR.fairValueDiscountPct).toBeUndefined();
+    expect(result.PLTR.upsideToTargetPct).toBeGreaterThan(25); // → Deep Value bucket in card
+  });
 });
