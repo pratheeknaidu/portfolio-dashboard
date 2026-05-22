@@ -164,3 +164,52 @@ describe("getValuations", () => {
     expect(result.GHOST).toBeUndefined();
   });
 });
+
+describe("getValuations caching", () => {
+  beforeEach(async () => {
+    const { clearCache } = jest.requireActual("@/lib/yahoo-finance-valuations") as typeof import("@/lib/yahoo-finance-valuations");
+    clearCache();
+    mockInsights.mockReset();
+    mockQuoteSummary.mockReset();
+  });
+
+  it("returns cached data within the 60s TTL", async () => {
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    mockInsights.mockResolvedValue(buildInsights({ description: "Undervalued" }));
+    mockQuoteSummary.mockResolvedValue(buildFinancialData({ recommendationKey: "buy", recommendationMean: 2 }));
+
+    await getValuations(["AAPL"]);
+    await getValuations(["AAPL"]);
+
+    expect(mockInsights).toHaveBeenCalledTimes(1);
+    expect(mockQuoteSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches when the ticker set changes", async () => {
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    mockInsights.mockResolvedValue(buildInsights({ description: "Undervalued" }));
+    mockQuoteSummary.mockResolvedValue(buildFinancialData({ recommendationKey: "buy" }));
+
+    await getValuations(["AAPL"]);
+    await getValuations(["MSFT"]);
+
+    expect(mockInsights).toHaveBeenCalledTimes(2);
+  });
+
+  it("refetches after the TTL elapses", async () => {
+    jest.useFakeTimers();
+    try {
+      const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+      mockInsights.mockResolvedValue(buildInsights({ description: "Undervalued" }));
+      mockQuoteSummary.mockResolvedValue(buildFinancialData({ recommendationKey: "buy" }));
+
+      await getValuations(["AAPL"]);
+      jest.advanceTimersByTime(61_000);
+      await getValuations(["AAPL"]);
+
+      expect(mockInsights).toHaveBeenCalledTimes(2);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
