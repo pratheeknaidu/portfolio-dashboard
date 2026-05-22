@@ -10,13 +10,16 @@ import { useToast } from "@/lib/toast-context";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import type { Holding, Quote, PortfolioItem, Snapshot } from "@/types";
+import { AnalystSentimentCard } from "@/components/AnalystSentimentCard";
+import { ValuationCard } from "@/components/ValuationCard";
+import type { Holding, Quote, PortfolioItem, Snapshot, ValuationData } from "@/types";
 
 export default function AnalyticsPage() {
   const { getIdToken } = useAuth();
   const toast = useToast();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [valuations, setValuations] = useState<Record<string, ValuationData>>({});
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
   const [deleting, setDeleting] = useState<PortfolioItem | null>(null);
@@ -56,9 +59,17 @@ export default function AnalyticsPage() {
               };
             })
           );
+
+          const valuationsRes = await fetch(`/api/valuations?tickers=${tickers}`, { headers });
+          if (valuationsRes.ok) {
+            setValuations(await valuationsRes.json());
+          } else {
+            setValuations({});
+          }
         }
       } else {
         setItems([]);
+        setValuations({});
       }
 
       const snapshotsRes = await fetch("/api/snapshot", { headers });
@@ -117,6 +128,10 @@ export default function AnalyticsPage() {
               </h2>
               <PerformanceChart snapshots={snapshots} />
             </section>
+          </div>
+          <div className="grid grid-cols-2 gap-6">
+            <AnalystSentimentCard items={items} valuations={valuations} />
+            <ValuationCard items={items} valuations={valuations} />
           </div>
           <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
             <h2 className="text-lg font-semibold text-white mb-4">Holdings</h2>
