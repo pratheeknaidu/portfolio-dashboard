@@ -1,5 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import type { RecommendationKey, ValuationData } from "@/types";
+import { getMockValuations } from "./yahoo-finance-valuations-mock";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -108,6 +109,10 @@ async function fetchOne(ticker: string): Promise<ValuationData | undefined> {
 }
 
 export async function getValuations(tickers: string[]): Promise<Record<string, ValuationData>> {
+  if (process.env.SANDBOX_MODE === "true") {
+    return getMockValuations(tickers);
+  }
+
   const cacheKey = [...tickers].sort().join(",") + "_valuations";
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {

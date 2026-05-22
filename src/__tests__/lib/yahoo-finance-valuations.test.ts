@@ -213,3 +213,31 @@ describe("getValuations caching", () => {
     }
   });
 });
+
+describe("SANDBOX_MODE short-circuit", () => {
+  const PREV = process.env.SANDBOX_MODE;
+
+  beforeEach(() => {
+    jest.resetModules();
+    mockInsights.mockReset();
+    mockQuoteSummary.mockReset();
+  });
+
+  afterEach(() => {
+    if (PREV === undefined) delete process.env.SANDBOX_MODE;
+    else process.env.SANDBOX_MODE = PREV;
+  });
+
+  it("returns mock data without hitting yahoo-finance2 when SANDBOX_MODE=true", async () => {
+    process.env.SANDBOX_MODE = "true";
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    const result = await getValuations(["AAPL", "MSFT", "SPY"]);
+
+    expect(mockInsights).not.toHaveBeenCalled();
+    expect(mockQuoteSummary).not.toHaveBeenCalled();
+    expect(result.AAPL).toBeDefined();
+    expect(result.MSFT).toBeDefined();
+    expect(result.SPY).toBeUndefined();  // SPY is in NO_COVERAGE
+    expect(result.AAPL.valuationSource).toBe("both");
+  });
+});
