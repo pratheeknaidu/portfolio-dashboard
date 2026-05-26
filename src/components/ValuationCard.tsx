@@ -68,13 +68,13 @@ export function ValuationCard({ items, valuations }: Props) {
   return (
     <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
       <h2 className="text-lg font-semibold text-white mb-4">Valuation</h2>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-4 md:gap-2">
         {BUCKETS.map(({ id, label, chipClass }) => (
           <div key={id} data-testid={`vbucket-${id}`} className="flex flex-col gap-2">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide">
               {label} ({bucketed[id].length})
             </h3>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5 md:flex-col md:gap-1.5">
               {bucketed[id].map(({ item, v }) => {
                 const fvPart = v.fairValueDiscountPct !== undefined ? `FV: ${formatPct(v.fairValueDiscountPct)}` : null;
                 const tgtPart = v.upsideToTargetPct !== undefined ? `Tgt: ${formatPct(v.upsideToTargetPct)}` : null;

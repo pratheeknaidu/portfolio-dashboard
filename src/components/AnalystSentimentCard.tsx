@@ -47,13 +47,13 @@ export function AnalystSentimentCard({ items, valuations }: Props) {
   return (
     <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
       <h2 className="text-lg font-semibold text-white mb-4">Analyst Sentiment</h2>
-      <div className="grid grid-cols-5 gap-2">
+      <div className="flex flex-col gap-4 md:grid md:grid-cols-5 md:gap-2">
         {BUCKETS.map(({ id, label, chipClass }) => (
           <div key={id} data-testid={`bucket-${id}`} className="flex flex-col gap-2">
             <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide">
               {label} ({bucketed[id].length})
             </h3>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5 md:flex-col md:gap-1.5">
               {bucketed[id].map(({ item, v }) => (
                 <span
                   key={item.ticker}
