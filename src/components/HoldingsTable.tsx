@@ -253,10 +253,19 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
             <div
               key={item.ticker}
               data-testid="holding-card"
+              role="button"
+              tabIndex={0}
+              aria-expanded={expanded}
               onClick={() =>
                 setExpandedCardTicker(expanded ? null : item.ticker)
               }
-              className="p-3 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-border/30 cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpandedCardTicker(expanded ? null : item.ticker);
+                }
+              }}
+              className="p-3 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-border/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <div className="flex items-center justify-between">
                 <span className="font-mono font-semibold text-white">{item.ticker}</span>

@@ -150,4 +150,12 @@ describe("HoldingsTable mobile cards", () => {
     fireEvent.click(deleteButton);
     expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ ticker: "AAPL" }));
   });
+
+  it("expands on Enter key when card is focused", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    const firstCard = screen.getAllByTestId("holding-card")[0];
+    fireEvent.keyDown(firstCard, { key: "Enter" });
+    expect(firstCard.querySelector("[data-testid='holding-card-detail']")).not.toBeNull();
+    expect(firstCard).toHaveAttribute("aria-expanded", "true");
+  });
 });
