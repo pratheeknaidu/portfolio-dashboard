@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, ReactNode } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface SheetProps {
   open: boolean;
@@ -11,6 +12,12 @@ interface SheetProps {
 
 export function Sheet({ open, onClose, children, labelledBy }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // Defer portal until after mount so SSR + first client render match (both null),
+  // then portal once `document` is available.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -30,14 +37,17 @@ export function Sheet({ open, onClose, children, labelledBy }: SheetProps) {
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
   };
 
-  return (
+  // Portal to document.body so the fixed-position overlay escapes any
+  // ancestor that creates a new containing block (e.g. `backdrop-filter` on
+  // .bento-card would otherwise clip the overlay to the card's bounds).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60"
       data-testid="sheet-overlay"
@@ -53,6 +63,7 @@ export function Sheet({ open, onClose, children, labelledBy }: SheetProps) {
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
