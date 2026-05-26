@@ -4,7 +4,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
   Tooltip,
 } from "recharts";
 
@@ -45,7 +44,6 @@ export function SectorChart({ sectors }: SectorChartProps) {
                 [`$${Number(value).toLocaleString()}`, "Value"]
               }
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
       </div>
