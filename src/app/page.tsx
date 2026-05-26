@@ -232,7 +232,11 @@ export default function DashboardPage() {
                 <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
               )}
             </div>
-            <TreemapTooltip item={selectedItem} tileRect={tileRect} />
+            <TreemapTooltip
+              item={selectedItem}
+              tileRect={tileRect}
+              onClose={dismissSelection}
+            />
           </div>
 
           {/* Row 3: Allocation (col-5) + Movers (col-7) */}
