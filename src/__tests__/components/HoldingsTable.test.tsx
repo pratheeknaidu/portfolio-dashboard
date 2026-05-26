@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import type { PortfolioItem } from "@/types";
@@ -21,8 +21,9 @@ const items: PortfolioItem[] = [
 describe("HoldingsTable", () => {
   it("renders all holdings rows", () => {
     render(<HoldingsTable items={items} totalValue={17975} />);
-    expect(screen.getByText("AAPL")).toBeInTheDocument();
-    expect(screen.getByText("MSFT")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("AAPL")).toBeInTheDocument();
+    expect(within(table).getByText("MSFT")).toBeInTheDocument();
   });
 
   it("sorts by column when header clicked", () => {
@@ -36,13 +37,15 @@ describe("HoldingsTable", () => {
     render(<HoldingsTable items={items} totalValue={17975} />);
     const search = screen.getByPlaceholderText(/search/i);
     fireEvent.change(search, { target: { value: "apple" } });
-    expect(screen.getByText("AAPL")).toBeInTheDocument();
-    expect(screen.queryByText("MSFT")).not.toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("AAPL")).toBeInTheDocument();
+    expect(within(table).queryByText("MSFT")).not.toBeInTheDocument();
   });
 
   it("color-codes positive P&L green and negative red", () => {
     render(<HoldingsTable items={items} totalValue={17975} />);
-    const aaplPL = screen.getByText(/\$2,135/);
+    const table = screen.getByRole("table");
+    const aaplPL = within(table).getByText(/\$2,135/);
     expect(aaplPL.className).toContain("text-gain");
   });
 });
@@ -89,5 +92,62 @@ describe("HoldingsTable Actions column", () => {
     expect(screen.getByRole("button", { name: /^edit$/i })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("HoldingsTable mobile cards", () => {
+  it("renders one card per holding", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    expect(screen.getAllByTestId("holding-card").length).toBe(items.length);
+  });
+
+  it("expands a card when tapped and shows extra detail", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    const cards = screen.getAllByTestId("holding-card");
+    expect(cards[0].querySelector("[data-testid='holding-card-detail']")).toBeNull();
+    fireEvent.click(cards[0]);
+    expect(cards[0].querySelector("[data-testid='holding-card-detail']")).not.toBeNull();
+  });
+
+  it("collapses the previous card when a different one is tapped", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    const cards = screen.getAllByTestId("holding-card");
+    fireEvent.click(cards[0]);
+    expect(cards[0].querySelector("[data-testid='holding-card-detail']")).not.toBeNull();
+    fireEvent.click(cards[1]);
+    expect(cards[0].querySelector("[data-testid='holding-card-detail']")).toBeNull();
+    expect(cards[1].querySelector("[data-testid='holding-card-detail']")).not.toBeNull();
+  });
+
+  it("collapses on second tap of the same card", () => {
+    render(<HoldingsTable items={items} totalValue={17975} />);
+    const firstCard = screen.getAllByTestId("holding-card")[0];
+    fireEvent.click(firstCard);
+    fireEvent.click(firstCard);
+    expect(firstCard.querySelector("[data-testid='holding-card-detail']")).toBeNull();
+  });
+
+  it("fires onEdit when card Edit button is tapped", () => {
+    const onEdit = jest.fn();
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={onEdit} onDelete={jest.fn()} />);
+    const firstCard = screen.getAllByTestId("holding-card")[0];
+    fireEvent.click(firstCard);
+    const detail = firstCard.querySelector("[data-testid='holding-card-detail']");
+    if (!detail) throw new Error("detail not rendered");
+    const editButton = within(detail as HTMLElement).getByRole("button", { name: /edit/i });
+    fireEvent.click(editButton);
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ ticker: "AAPL" }));
+  });
+
+  it("fires onDelete when card Delete button is tapped", () => {
+    const onDelete = jest.fn();
+    render(<HoldingsTable items={items} totalValue={17975} onEdit={jest.fn()} onDelete={onDelete} />);
+    const firstCard = screen.getAllByTestId("holding-card")[0];
+    fireEvent.click(firstCard);
+    const detail = firstCard.querySelector("[data-testid='holding-card-detail']");
+    if (!detail) throw new Error("detail not rendered");
+    const deleteButton = within(detail as HTMLElement).getByRole("button", { name: /delete/i });
+    fireEvent.click(deleteButton);
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ ticker: "AAPL" }));
   });
 });
