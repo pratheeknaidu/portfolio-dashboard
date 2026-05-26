@@ -182,13 +182,13 @@ export default function DashboardPage() {
       <div className="min-h-screen flex flex-col">
         <Navbar onImportClick={() => setShowImport(true)} />
 
-        <main className="flex-1 px-4 md:px-8 py-8 max-w-[1400px] w-full mx-auto">
+        <main className="flex-1 px-4 md:px-8 py-4 md:py-8 max-w-[1400px] w-full mx-auto">
           {/* Row 1: Hero (col-8) + 2 stacked metric cards (col-4) */}
           <div className="grid grid-cols-12 gap-4 mb-4">
-            <div className="col-span-12 lg:col-span-8">
+            <div className="col-span-12 md:col-span-8">
               <PortfolioHeroCard items={items} />
             </div>
-            <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
+            <div className="col-span-12 md:col-span-4 flex flex-col gap-4">
               <MetricCard
                 label="Cost Basis"
                 value={fmtCurrency(totalCostBasis)}
@@ -225,22 +225,26 @@ export default function DashboardPage() {
               </div>
             </div>
             <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
-            <div className="h-[440px] md:h-[520px] relative">
+            <div className="h-[360px] sm:h-[440px] md:h-[520px] relative">
               {hasFetched && items.length === 0 ? (
                 <EmptyPortfolio onImportClick={() => setShowImport(true)} />
               ) : (
                 <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
               )}
             </div>
-            <TreemapTooltip item={selectedItem} tileRect={tileRect} />
+            <TreemapTooltip
+              item={selectedItem}
+              tileRect={tileRect}
+              onClose={dismissSelection}
+            />
           </div>
 
           {/* Row 3: Allocation (col-5) + Movers (col-7) */}
           <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-12 lg:col-span-5">
+            <div className="col-span-12 md:col-span-5">
               <AllocationCard items={items} />
             </div>
-            <div className="col-span-12 lg:col-span-7">
+            <div className="col-span-12 md:col-span-7">
               <MoversCard items={items} />
             </div>
           </div>

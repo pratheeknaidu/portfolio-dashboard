@@ -1,3 +1,6 @@
+"use client";
+import { useIsMobile } from "@/lib/use-is-mobile";
+import { Sheet } from "@/components/ui/Sheet";
 import type { PortfolioItem } from "@/types";
 
 function fmt(n: number): string {
@@ -33,18 +36,14 @@ function position(rect: TileRect | null) {
 interface Props {
   item: PortfolioItem | null;
   tileRect: TileRect | null;
+  /** Called when the mobile sheet overlay is tapped or Escape pressed. Desktop tooltip ignores. */
+  onClose?: () => void;
 }
 
-export function TreemapTooltip({ item, tileRect }: Props) {
-  if (!item) return null;
-  const { top, left } = position(tileRect);
+function TileBody({ item }: { item: PortfolioItem }) {
   const dayChange = item.quote.change * item.shares;
-
   return (
-    <div
-      className="bento-card fixed z-50 p-5 text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
-      style={{ top, left, width: TOOLTIP_W }}
-    >
+    <>
       <div className="font-display text-base font-semibold text-foreground">
         {item.companyName}
       </div>
@@ -71,6 +70,31 @@ export function TreemapTooltip({ item, tileRect }: Props) {
           {fmt(dayChange)} ({item.quote.changePercent.toFixed(2)}%)
         </span>
       </div>
+    </>
+  );
+}
+
+export function TreemapTooltip({ item, tileRect, onClose }: Props) {
+  const isMobile = useIsMobile();
+  if (!item) return null;
+
+  if (isMobile) {
+    return (
+      <Sheet open onClose={onClose ?? (() => {})}>
+        <div className="p-5">
+          <TileBody item={item} />
+        </div>
+      </Sheet>
+    );
+  }
+
+  const { top, left } = position(tileRect);
+  return (
+    <div
+      className="bento-card fixed z-50 p-5 text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
+      style={{ top, left, width: TOOLTIP_W }}
+    >
+      <TileBody item={item} />
     </div>
   );
 }

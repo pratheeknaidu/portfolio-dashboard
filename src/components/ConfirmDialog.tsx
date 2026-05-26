@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Sheet } from "@/components/ui/Sheet";
 
 interface ConfirmDialogProps {
   title: string;
@@ -30,21 +31,13 @@ export function ConfirmDialog({
     }
   };
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !pending) onCancel();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [pending, onCancel]);
-
   const confirmClass = destructive
     ? "bg-loss hover:bg-loss/90"
     : "bg-accent hover:bg-accent-dark";
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" className="bg-surface-card border border-surface-border rounded-xl p-6 w-[400px] shadow-2xl">
+    <Sheet open onClose={() => { if (!pending) onCancel(); }} labelledBy="confirm-dialog-title">
+      <div className="p-5 md:p-6">
         <h2 id="confirm-dialog-title" className="text-lg font-bold text-white mb-2">{title}</h2>
         <p className="text-sm text-gray-300 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
@@ -67,6 +60,6 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

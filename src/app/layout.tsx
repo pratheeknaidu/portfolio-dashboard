@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       lang="en"
       className={`dark ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
     >
-      <body className="min-h-screen">
+      <body className="min-h-screen overflow-x-hidden">
         <AuthProvider>
           <ToastProvider>
             {children}

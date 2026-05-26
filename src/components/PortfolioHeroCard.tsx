@@ -72,13 +72,13 @@ export function PortfolioHeroCard({ items }: Props) {
         }));
 
   return (
-    <div className="bento-card p-8 h-full flex flex-col">
+    <div className="bento-card p-5 md:p-8 h-full flex flex-col">
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground mb-3">
             Portfolio Value
           </div>
-          <div className="font-display text-5xl md:text-6xl font-semibold text-foreground tabular-nums num-fade">
+          <div className="font-display text-4xl sm:text-5xl md:text-6xl font-semibold text-foreground tabular-nums num-fade">
             {fmtCurrency(totalValue)}
           </div>
           <div className="mt-3 flex items-center gap-3">

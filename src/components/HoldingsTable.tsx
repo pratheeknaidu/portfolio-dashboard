@@ -32,6 +32,7 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [searchTerm, setSearchTerm] = useState("");
   const [openMenuTicker, setOpenMenuTicker] = useState<string | null>(null);
+  const [expandedCardTicker, setExpandedCardTicker] = useState<string | null>(null);
   const [menuDirection, setMenuDirection] = useState<"down" | "up">("down");
   const menuRef = useRef<HTMLDivElement | null>(null);
   const showActions = Boolean(onEdit || onDelete);
@@ -140,7 +141,9 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
           className="w-full max-w-xs px-3 py-1.5 bg-surface-border text-white text-sm rounded border border-surface-border focus:outline-none focus:ring-1 focus:ring-accent placeholder-gray-500"
         />
       </div>
-      <div className="overflow-x-auto">
+
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-border">
@@ -170,35 +173,17 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
                   key={item.ticker}
                   className="border-b border-surface-border hover:bg-surface-border/30"
                 >
-                  <td className="px-3 py-2 font-mono font-semibold text-white">
-                    {item.ticker}
-                  </td>
+                  <td className="px-3 py-2 font-mono font-semibold text-white">{item.ticker}</td>
                   <td className="px-3 py-2 text-gray-300">{item.companyName}</td>
                   <td className="px-3 py-2 text-gray-300">{item.shares}</td>
-                  <td className="px-3 py-2 text-gray-300">
-                    ${item.avgCost.toFixed(2)}
+                  <td className="px-3 py-2 text-gray-300">${item.avgCost.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-gray-300">${item.quote.price.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-gray-300">{fmt(item.marketValue)}</td>
+                  <td className={`px-3 py-2 ${dayPositive ? "text-gain" : "text-loss"}`}>
+                    {dayPositive ? "+" : ""}{item.quote.changePercent.toFixed(2)}%
                   </td>
-                  <td className="px-3 py-2 text-gray-300">
-                    ${item.quote.price.toFixed(2)}
-                  </td>
-                  <td className="px-3 py-2 text-gray-300">
-                    {fmt(item.marketValue)}
-                  </td>
-                  <td
-                    className={`px-3 py-2 ${
-                      dayPositive ? "text-gain" : "text-loss"
-                    }`}
-                  >
-                    {dayPositive ? "+" : ""}
-                    {item.quote.changePercent.toFixed(2)}%
-                  </td>
-                  <td
-                    className={`px-3 py-2 ${
-                      plPositive ? "text-gain" : "text-loss"
-                    }`}
-                  >
-                    {plPositive ? "" : "-"}
-                    {fmt(item.totalPL)}
+                  <td className={`px-3 py-2 ${plPositive ? "text-gain" : "text-loss"}`}>
+                    {plPositive ? "" : "-"}{fmt(item.totalPL)}
                   </td>
                   <td className="px-3 py-2 text-gray-300">{portfolioPct}%</td>
                   {showActions && (
@@ -253,6 +238,87 @@ export function HoldingsTable({ items, totalValue, onEdit, onDelete }: HoldingsT
             })}
           </tbody>
         </table>
+        {sorted.length === 0 && (
+          <div className="text-center py-8 text-gray-500">No holdings found</div>
+        )}
+      </div>
+
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2">
+        {sorted.map((item) => {
+          const dayPositive = item.quote.changePercent >= 0;
+          const plPositive = item.totalPL >= 0;
+          const expanded = expandedCardTicker === item.ticker;
+          return (
+            <div
+              key={item.ticker}
+              data-testid="holding-card"
+              role="button"
+              tabIndex={0}
+              aria-expanded={expanded}
+              onClick={() =>
+                setExpandedCardTicker(expanded ? null : item.ticker)
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpandedCardTicker(expanded ? null : item.ticker);
+                }
+              }}
+              className="p-3 rounded-lg border border-surface-border bg-surface-card hover:bg-surface-border/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-semibold text-white">{item.ticker}</span>
+                <span className={dayPositive ? "text-gain" : "text-loss"}>
+                  {dayPositive ? "+" : ""}{item.quote.changePercent.toFixed(2)}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1 text-sm">
+                <span className="text-gray-300">{fmt(item.marketValue)}</span>
+                <span className={plPositive ? "text-gain" : "text-loss"}>
+                  {plPositive ? "" : "-"}{fmt(item.totalPL)}
+                </span>
+              </div>
+
+              {expanded && (
+                <div
+                  data-testid="holding-card-detail"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-3 pt-3 border-t border-surface-border text-xs text-gray-400 space-y-1"
+                >
+                  <div className="text-gray-300">{item.companyName}</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <span>Shares</span><span className="text-right text-gray-300">{item.shares}</span>
+                    <span>Avg Cost</span><span className="text-right text-gray-300">${item.avgCost.toFixed(2)}</span>
+                    <span>Price</span><span className="text-right text-gray-300">${item.quote.price.toFixed(2)}</span>
+                  </div>
+                  {showActions && (
+                    <div className="flex gap-2 pt-2">
+                      {onEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(item)}
+                          className="flex-1 px-3 py-2 text-sm bg-surface-border rounded text-white"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(item)}
+                          className="flex-1 px-3 py-2 text-sm bg-loss/20 text-loss rounded"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {sorted.length === 0 && (
           <div className="text-center py-8 text-gray-500">No holdings found</div>
         )}

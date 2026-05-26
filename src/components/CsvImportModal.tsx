@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
+import { Sheet } from "@/components/ui/Sheet";
 
 interface Props {
   onClose: () => void;
@@ -96,8 +97,8 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
   const canSubmit = mode === "csv" ? !!file : pasteText.trim().length > 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-surface-card border border-surface-border rounded-xl p-6 w-[480px] shadow-2xl">
+    <Sheet open onClose={onClose}>
+      <div className="p-5 md:p-6">
         <h2 className="text-lg font-bold text-white mb-4">Import Holdings</h2>
 
         {!result ? (
@@ -197,6 +198,6 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </Sheet>
   );
 }
