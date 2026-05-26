@@ -114,26 +114,26 @@ export default function AnalyticsPage() {
     <AuthGuard>
       <div className="flex flex-col h-screen">
         <Navbar onImportClick={() => setShowImport(true)} />
-        <main className="flex-1 overflow-auto p-6 space-y-8">
-          <div className="grid grid-cols-2 gap-6">
-            <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
+        <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6 md:space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
               <h2 className="text-lg font-semibold text-white mb-4">
                 Sector Allocation
               </h2>
               <SectorChart sectors={sectors} />
             </section>
-            <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
+            <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
               <h2 className="text-lg font-semibold text-white mb-4">
                 Performance Over Time
               </h2>
               <PerformanceChart snapshots={snapshots} />
             </section>
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <AnalystSentimentCard items={items} valuations={valuations} />
             <ValuationCard items={items} valuations={valuations} />
           </div>
-          <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
+          <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
             <h2 className="text-lg font-semibold text-white mb-4">Holdings</h2>
             <HoldingsTable
               items={items}
