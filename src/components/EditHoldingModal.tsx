@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { Sheet } from "@/components/ui/Sheet";
 import type { PortfolioItem } from "@/types";
 
 interface Props {
@@ -47,8 +48,8 @@ export function EditHoldingModal({ holding, onClose, onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-surface-card border border-surface-border rounded-xl p-6 w-[400px] shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="edit-holding-title">
+    <Sheet open onClose={() => { if (!saving) onClose(); }} labelledBy="edit-holding-title">
+      <div className="p-5 md:p-6">
         <h2 id="edit-holding-title" className="text-lg font-bold text-white mb-1">Edit holding</h2>
         <p className="text-sm text-gray-400 mb-4">{holding.ticker} &middot; {holding.companyName}</p>
 
@@ -98,6 +99,6 @@ export function EditHoldingModal({ holding, onClose, onSuccess }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </Sheet>
   );
 }
