@@ -1,6 +1,19 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { ValuationCard } from "@/components/ValuationCard";
 import type { PortfolioItem, ValuationData } from "@/types";
+
+// jsdom doesn't implement matchMedia; stub it so useIsMobile (via DetailPanel) doesn't throw.
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockReturnValue({
+      matches: false,
+      media: "",
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }),
+  });
+});
 
 function item(ticker: string): PortfolioItem {
   return {
@@ -96,5 +109,16 @@ describe("ValuationCard", () => {
     expect(chips[0]).toHaveTextContent("B"); // 25%
     expect(chips[1]).toHaveTextContent("C"); // 18%
     expect(chips[2]).toHaveTextContent("A"); // 12%
+  });
+
+  it("opens a detail panel when a chip is clicked", () => {
+    const items = [item("AAPL")];
+    const valuations: Record<string, ValuationData> = {
+      AAPL: { valuationSource: "both", fairValueDescription: "Undervalued", fairValueDiscountPct: 12, upsideToTargetPct: 15, targetMeanPrice: 210, targetLowPrice: 150, targetHighPrice: 260 },
+    };
+    render(<ValuationCard items={items} valuations={valuations} />);
+    expect(screen.queryByText("Your Position")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("chip-AAPL"));
+    expect(screen.getByText("Your Position")).toBeInTheDocument();
   });
 });

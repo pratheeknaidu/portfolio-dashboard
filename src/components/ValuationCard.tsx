@@ -1,5 +1,8 @@
 "use client";
 import type { PortfolioItem, ValuationData } from "@/types";
+import { useDetailSelection } from "@/lib/use-detail-selection";
+import { DetailPanel } from "@/components/ui/DetailPanel";
+import { ChipDetail } from "@/components/ChipDetail";
 
 interface Props {
   items: PortfolioItem[];
@@ -65,6 +68,8 @@ export function ValuationCard({ items, valuations }: Props) {
     });
   }
 
+  const { selected, rect, select } = useDetailSelection<PortfolioItem>();
+
   return (
     <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
       <h2 className="text-lg font-semibold text-white mb-4">Valuation</h2>
@@ -79,21 +84,20 @@ export function ValuationCard({ items, valuations }: Props) {
                 const fvPart = v.fairValueDiscountPct !== undefined ? `FV: ${formatPct(v.fairValueDiscountPct)}` : null;
                 const tgtPart = v.upsideToTargetPct !== undefined ? `Tgt: ${formatPct(v.upsideToTargetPct)}` : null;
                 const subtext = [fvPart, tgtPart].filter(Boolean).join(" · ");
-                const tooltip = [
-                  v.fairValueDescription && `Yahoo: ${v.fairValueDescription}${v.fairValueProvider ? ` (${v.fairValueProvider})` : ""}`,
-                  v.targetMeanPrice !== undefined && `Target: $${v.targetMeanPrice.toFixed(2)}`,
-                  v.numberOfAnalystOpinions && `${v.numberOfAnalystOpinions} analysts`,
-                ].filter(Boolean).join(" · ");
                 return (
-                  <span
+                  <button
+                    type="button"
                     key={item.ticker}
                     data-testid={`chip-${item.ticker}`}
-                    title={tooltip || item.ticker}
-                    className={`text-xs px-2 py-1 rounded border ${chipClass} text-center flex flex-col gap-0.5`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      select(item, e.currentTarget.getBoundingClientRect());
+                    }}
+                    className={`text-xs px-2 py-1 rounded border ${chipClass} text-center flex flex-col gap-0.5 cursor-pointer`}
                   >
                     <span className="font-semibold">{item.ticker}</span>
                     {subtext && <span className="text-[10px] opacity-75 font-normal">{subtext}</span>}
-                  </span>
+                  </button>
                 );
               })}
             </div>
@@ -104,6 +108,11 @@ export function ValuationCard({ items, valuations }: Props) {
         <div data-testid="no-coverage-strip" className="mt-4 text-xs text-gray-500">
           No coverage: {noCoverage.join(", ")}
         </div>
+      )}
+      {selected && valuations[selected.ticker] && (
+        <DetailPanel rect={rect} onClose={() => select(selected, rect!)}>
+          <ChipDetail item={selected} v={valuations[selected.ticker]} />
+        </DetailPanel>
       )}
     </section>
   );

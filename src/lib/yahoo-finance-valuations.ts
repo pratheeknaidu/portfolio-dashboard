@@ -86,6 +86,14 @@ async function fetchOne(ticker: string): Promise<ValuationData | undefined> {
         data.targetMeanPrice = fd.targetMeanPrice;
         touched = true;
       }
+      if (typeof fd.targetLowPrice === "number") {
+        data.targetLowPrice = fd.targetLowPrice;
+        touched = true;
+      }
+      if (typeof fd.targetHighPrice === "number") {
+        data.targetHighPrice = fd.targetHighPrice;
+        touched = true;
+      }
       if (typeof fd.currentPrice === "number") {
         data.currentPrice = fd.currentPrice;
         touched = true;

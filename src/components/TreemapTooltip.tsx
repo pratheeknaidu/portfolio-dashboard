@@ -1,36 +1,11 @@
 "use client";
-import { useIsMobile } from "@/lib/use-is-mobile";
-import { Sheet } from "@/components/ui/Sheet";
+import { DetailPanel, type TileRect } from "@/components/ui/DetailPanel";
 import type { PortfolioItem } from "@/types";
+
+export type { TileRect };
 
 function fmt(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
-}
-
-export interface TileRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-const TOOLTIP_W = 256;
-const TOOLTIP_H = 220;
-const GAP = 8;
-
-function position(rect: TileRect | null) {
-  if (!rect) return { top: 0, left: 0 };
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1920;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 1080;
-
-  let top = rect.top - TOOLTIP_H - GAP;
-  if (top < GAP) top = rect.top + rect.height + GAP;
-  if (top + TOOLTIP_H > vh - GAP) top = Math.max(GAP, vh - TOOLTIP_H - GAP);
-
-  let left = rect.left + rect.width / 2 - TOOLTIP_W / 2;
-  left = Math.max(GAP, Math.min(left, vw - TOOLTIP_W - GAP));
-
-  return { top, left };
 }
 
 interface Props {
@@ -75,26 +50,10 @@ function TileBody({ item }: { item: PortfolioItem }) {
 }
 
 export function TreemapTooltip({ item, tileRect, onClose }: Props) {
-  const isMobile = useIsMobile();
   if (!item) return null;
-
-  if (isMobile) {
-    return (
-      <Sheet open onClose={onClose ?? (() => {})}>
-        <div className="p-5">
-          <TileBody item={item} />
-        </div>
-      </Sheet>
-    );
-  }
-
-  const { top, left } = position(tileRect);
   return (
-    <div
-      className="bento-card fixed z-50 p-5 text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
-      style={{ top, left, width: TOOLTIP_W }}
-    >
+    <DetailPanel rect={tileRect} onClose={onClose ?? (() => {})}>
       <TileBody item={item} />
-    </div>
+    </DetailPanel>
   );
 }

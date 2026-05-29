@@ -51,6 +51,8 @@ export interface ValuationData {
   fairValueDiscountPct?: number;     // signed %; positive = below fair value
   fairValueProvider?: string;        // e.g. "Trading Central"
   targetMeanPrice?: number;
+  targetLowPrice?: number;
+  targetHighPrice?: number;
   currentPrice?: number;             // included so client can verify upside calc
   upsideToTargetPct?: number;        // (target - current) / current * 100
 
