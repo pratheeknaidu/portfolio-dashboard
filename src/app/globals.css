@@ -107,4 +107,41 @@
   .num-fade {
     transition: color 200ms ease, opacity 200ms ease;
   }
+
+  /* Edge-fading gradient hairline with a faint emerald glow, used as a
+     refined alternative to a flat full-width border (e.g. under the navbar). */
+  .app-divider {
+    position: relative;
+  }
+
+  .app-divider::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--border) 60%, transparent) 20%,
+      color-mix(in oklab, var(--primary) 60%, transparent) 50%,
+      color-mix(in oklab, var(--border) 60%, transparent) 80%,
+      transparent
+    );
+  }
+
+  .app-divider::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -10px;
+    height: 18px;
+    pointer-events: none;
+    background: radial-gradient(
+      55% 100% at 50% 0%,
+      color-mix(in oklab, var(--primary) 18%, transparent),
+      transparent 72%
+    );
+  }
 }
