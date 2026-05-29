@@ -1,5 +1,8 @@
 "use client";
 import type { PortfolioItem, RecommendationKey, ValuationData } from "@/types";
+import { useDetailSelection } from "@/lib/use-detail-selection";
+import { DetailPanel } from "@/components/ui/DetailPanel";
+import { ChipDetail } from "@/components/ChipDetail";
 
 interface Props {
   items: PortfolioItem[];
@@ -44,6 +47,8 @@ export function AnalystSentimentCard({ items, valuations }: Props) {
     });
   }
 
+  const { selected, rect, select } = useDetailSelection<PortfolioItem>();
+
   return (
     <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
       <h2 className="text-lg font-semibold text-white mb-4">Analyst Sentiment</h2>
@@ -54,19 +59,19 @@ export function AnalystSentimentCard({ items, valuations }: Props) {
               {label} ({bucketed[id].length})
             </h3>
             <div className="flex flex-wrap gap-1.5 md:flex-col md:gap-1.5">
-              {bucketed[id].map(({ item, v }) => (
-                <span
+              {bucketed[id].map(({ item }) => (
+                <button
+                  type="button"
                   key={item.ticker}
                   data-testid={`chip-${item.ticker}`}
-                  title={
-                    v.recommendationMean !== undefined
-                      ? `Rec mean ${v.recommendationMean.toFixed(2)}${v.numberOfAnalystOpinions ? ` · ${v.numberOfAnalystOpinions} analysts` : ""}`
-                      : item.ticker
-                  }
-                  className={`text-xs font-semibold px-2 py-1 rounded border ${chipClass} text-center`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    select(item, e.currentTarget.getBoundingClientRect());
+                  }}
+                  className={`text-xs font-semibold px-2 py-1 rounded border ${chipClass} text-center cursor-pointer`}
                 >
                   {item.ticker}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -76,6 +81,11 @@ export function AnalystSentimentCard({ items, valuations }: Props) {
         <div data-testid="no-coverage-strip" className="mt-4 text-xs text-gray-500">
           No coverage: {noCoverage.join(", ")}
         </div>
+      )}
+      {selected && valuations[selected.ticker] && (
+        <DetailPanel rect={rect} onClose={() => select(selected, rect!)}>
+          <ChipDetail item={selected} v={valuations[selected.ticker]} />
+        </DetailPanel>
       )}
     </section>
   );
