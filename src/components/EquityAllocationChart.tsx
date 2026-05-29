@@ -4,12 +4,10 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
 } from "recharts";
 import type { PortfolioItem } from "@/types";
 import { useDetailSelection } from "@/lib/use-detail-selection";
 import { DetailPanel } from "@/components/ui/DetailPanel";
-import { ChartTooltip } from "@/components/ui/ChartTooltip";
 import { SERIES_COLORS, MUTED_SERIES_COLOR } from "@/lib/chart-palette";
 
 const TOP_N = 12;
@@ -99,7 +97,6 @@ export function EquityAllocationChart({ items }: EquityAllocationChartProps) {
                 />
               ))}
             </Pie>
-            <Tooltip content={<ChartTooltip />} />
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">

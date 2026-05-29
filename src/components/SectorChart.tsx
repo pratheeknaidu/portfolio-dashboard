@@ -4,9 +4,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
 } from "recharts";
-import { ChartTooltip } from "@/components/ui/ChartTooltip";
 import { SERIES_COLORS } from "@/lib/chart-palette";
 
 interface SectorChartProps {
@@ -54,7 +52,6 @@ export function SectorChart({ sectors }: SectorChartProps) {
                 <Cell key={entry.name} fill={entry.color} className="focus:outline-none" />
               ))}
             </Pie>
-            <Tooltip content={<ChartTooltip />} />
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
