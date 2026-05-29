@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/Navbar";
 import { SectorChart } from "@/components/SectorChart";
+import { EquityAllocationChart } from "@/components/EquityAllocationChart";
 import { PerformanceChart } from "@/components/PerformanceChart";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
@@ -129,6 +130,12 @@ export default function AnalyticsPage() {
               <PerformanceChart snapshots={snapshots} />
             </section>
           </div>
+          <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
+            <h2 className="text-lg font-semibold text-white mb-4">
+              Equity Allocation
+            </h2>
+            <EquityAllocationChart items={items} />
+          </section>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <AnalystSentimentCard items={items} valuations={valuations} />
             <ValuationCard items={items} valuations={valuations} />
