@@ -56,3 +56,7 @@ graphify-out/.graphify_python
 # personal data dumps left in repo root
 /latest.csv
 /4a245e8e-aa48-5db6-9b60-ff95426f8061.csv
+
+# playwright mcp captures and screenshots dropped at repo root
+/.playwright-mcp/
+/*.png
