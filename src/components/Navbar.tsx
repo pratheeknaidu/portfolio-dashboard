@@ -23,7 +23,7 @@ export function Navbar({ onImportClick }: NavbarProps) {
 
   return (
     <>
-      <nav className="h-16 flex items-center px-4 md:px-8 justify-between border-b border-border/40 backdrop-blur-md bg-background/40">
+      <nav className="app-divider h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-md bg-background/40">
         <div className="flex items-center gap-3 md:gap-8">
           <button
             type="button"
