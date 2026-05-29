@@ -57,6 +57,8 @@ function buildFinancialData(opts: {
   recommendationKey?: string;
   recommendationMean?: number;
   targetMeanPrice?: number;
+  targetLowPrice?: number;
+  targetHighPrice?: number;
   currentPrice?: number;
   numberOfAnalystOpinions?: number;
 } = {}) {
@@ -65,6 +67,8 @@ function buildFinancialData(opts: {
       recommendationKey: opts.recommendationKey,
       recommendationMean: opts.recommendationMean,
       targetMeanPrice: opts.targetMeanPrice,
+      targetLowPrice: opts.targetLowPrice,
+      targetHighPrice: opts.targetHighPrice,
       currentPrice: opts.currentPrice,
       numberOfAnalystOpinions: opts.numberOfAnalystOpinions,
     },
@@ -104,6 +108,24 @@ describe("getValuations", () => {
       upsideToTargetPct: expect.closeTo(29.12, 1),
       valuationSource: "both",
     });
+  });
+
+  it("passes through targetLowPrice and targetHighPrice from financialData", async () => {
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    mockInsights.mockResolvedValue({ symbol: "AAPL", instrumentInfo: {} });
+    mockQuoteSummary.mockResolvedValue(buildFinancialData({
+      recommendationKey: "buy",
+      recommendationMean: 2.0,
+      numberOfAnalystOpinions: 30,
+      targetMeanPrice: 200,
+      targetLowPrice: 150,
+      targetHighPrice: 260,
+      currentPrice: 180,
+    }));
+
+    const result = await getValuations(["AAPL"]);
+    expect(result.AAPL.targetLowPrice).toBe(150);
+    expect(result.AAPL.targetHighPrice).toBe(260);
   });
 
   it("sets valuationSource = 'fair_value' when only the description is present", async () => {
