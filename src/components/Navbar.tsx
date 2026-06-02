@@ -26,7 +26,13 @@ export function Navbar({ onImportClick, vix }: NavbarProps) {
 
   return (
     <>
-      <nav className="app-divider h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-md bg-background/40">
+      {/* `relative z-40` lifts the navbar's stacking context above page
+          content. The nav's `backdrop-blur` already forms a stacking context;
+          without an explicit z-index it paints behind later-in-DOM siblings
+          like `.bento-card` (which forms its own context via `backdrop-filter`),
+          which would otherwise hide the VIX info popover behind the chart.
+          Stays below the z-50/z-[60] modal+toast tier so overlays still cover it. */}
+      <nav className="app-divider relative z-40 h-16 flex items-center px-4 md:px-8 justify-between backdrop-blur-md bg-background/40">
         <div className="flex items-center gap-3 md:gap-8">
           <button
             type="button"
