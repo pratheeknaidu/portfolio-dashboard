@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
       ...vixSentiment(vix.value),
     });
   } catch (err) {
-    // VIX is ancillary — degrade to "hidden" rather than erroring the client.
-    return NextResponse.json({ value: null, message: String(err) });
+    // VIX is ancillary — log server-side and degrade to "hidden" for the client.
+    console.error("getVix failed:", err);
+    return NextResponse.json({ value: null });
   }
 }

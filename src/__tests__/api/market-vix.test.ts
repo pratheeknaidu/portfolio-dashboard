@@ -49,4 +49,20 @@ describe("GET /api/market/vix", () => {
     const body = await res.json();
     expect(body.value).toBeNull();
   });
+
+  it("degrades to { value: null } when getVix throws (no error detail leaked)", async () => {
+    (verifyRequest as jest.Mock).mockResolvedValue({ uid: "u1" });
+    (getVix as jest.Mock).mockRejectedValue(new Error("getaddrinfo ENOTFOUND query1.finance.yahoo.com"));
+
+    const req = new NextRequest("http://localhost/api/market/vix", {
+      headers: { Authorization: "Bearer t" },
+    });
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.value).toBeNull();
+    expect(body.message).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("ENOTFOUND");
+  });
 });
