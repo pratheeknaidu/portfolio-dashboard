@@ -27,4 +27,18 @@ describe("VixPill", () => {
     expect(screen.getByText("VIX 28.5")).toBeInTheDocument();
     expect(screen.getByText("Fearful")).toBeInTheDocument();
   });
+
+  it("applies the tone-specific color class", () => {
+    const { container } = render(
+      <VixPill data={{ value: 28.5, sentiment: "Fearful", action: "Strong buy", tone: "opportunity", strength: "strong" }} />,
+    );
+    expect(container.firstChild).toHaveClass("bg-positive/20");
+  });
+
+  it("falls back to the neutral tone class when tone is absent", () => {
+    const { container } = render(
+      <VixPill data={{ value: 16.2, sentiment: "Steady", action: "Neutral" }} />,
+    );
+    expect(container.firstChild).toHaveClass("bg-surface-elevated/60");
+  });
 });
