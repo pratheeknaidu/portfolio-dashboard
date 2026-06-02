@@ -90,12 +90,11 @@ Band → tone/strength mapping (authoritative):
 | `33–45`  | `opportunity` | `very-strong` |
 | `45+`    | `opportunity` | `strongest`   |
 
-Color family per tone: `caution` → grey, `neutral` → amber, `accumulate` →
-green, `opportunity` → saturated/confident green. `strength` modulates intensity
-within the family (e.g. `opportunity`+`strongest` is the most saturated). This
-removes the earlier grey→green→amber→green ambiguity: amber is the calm/neutral
-middle, green strengthens monotonically as fear (and the contrarian buy case)
-rises.
+Color family per tone: `caution` → amber (don't-chase warning at complacent
+lows), `neutral` → grey/muted (calm middle, nothing to do), `accumulate` → green,
+`opportunity` → saturated/confident green. `strength` modulates intensity within
+the family (e.g. `opportunity`+`strongest` is the most saturated). Green
+strengthens monotonically as fear — and the contrarian buy case — rises.
 
 ### 2. `src/lib/yahoo-finance.ts` — add `getVix()`
 
