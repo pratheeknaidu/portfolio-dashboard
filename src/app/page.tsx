@@ -179,15 +179,23 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchPortfolio();
-    fetchVix();
     const interval = setInterval(() => {
-      if (isMarketOpen()) {
-        fetchPortfolio();
-        fetchVix();
-      }
+      if (isMarketOpen()) fetchPortfolio();
     }, 60_000);
     return () => clearInterval(interval);
-  }, [fetchPortfolio, fetchVix]);
+  }, [fetchPortfolio]);
+
+  // VIX is independent of the selected time range, so keep it on its own
+  // effect/timer — otherwise a range toggle (which changes fetchPortfolio's
+  // identity) would spuriously refetch VIX too. fetchVix's only dep is the
+  // stable getIdToken, so this effect runs on mount and re-arms its timer once.
+  useEffect(() => {
+    fetchVix();
+    const interval = setInterval(() => {
+      if (isMarketOpen()) fetchVix();
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchVix]);
 
   const totalCostBasis = items.reduce(
     (sum, i) => sum + i.shares * i.avgCost,
