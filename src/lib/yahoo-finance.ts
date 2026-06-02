@@ -12,11 +12,6 @@ export interface QuotesResult {
 const CACHE_TTL = 60_000; // 60 seconds
 const cache = new Map<string, { data: QuotesResult; timestamp: number }>();
 
-export function clearCache() {
-  cache.clear();
-  vixCache.clear();
-}
-
 export interface VixResult {
   value: number;
   previousClose: number;
@@ -24,6 +19,11 @@ export interface VixResult {
 
 const vixCache = new Map<string, { data: VixResult; timestamp: number }>();
 const VIX_CACHE_KEY = "__VIX__";
+
+export function clearCache() {
+  cache.clear();
+  vixCache.clear();
+}
 
 export async function getVix(): Promise<VixResult | null> {
   if (process.env.SANDBOX_MODE === "true") {
