@@ -48,6 +48,7 @@ describe("VIX_BANDS", () => {
       expect(r.sentiment).toBe(b.sentiment);
       expect(r.action).toBe(b.action);
       expect(r.message).toBe(b.message);
+      expect(r.strength).toBe(b.strength);
       expect(r.tone).toBe(b.tone);
     }
   });

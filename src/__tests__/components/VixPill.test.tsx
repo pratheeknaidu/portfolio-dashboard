@@ -70,4 +70,20 @@ describe("VixPill", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("closes the popover when clicking outside the pill", () => {
+    jest.useFakeTimers();
+    try {
+      render(<VixPill data={sample} />);
+      fireEvent.click(screen.getByRole("button", { name: /how vix/i }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+      // the outside-click listener is registered via setTimeout(0); flush it
+      jest.runAllTimers();
+      fireEvent.click(document.body);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

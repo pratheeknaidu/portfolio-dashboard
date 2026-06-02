@@ -63,6 +63,7 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
           type="button"
           aria-label="How VIX sentiment is inferred"
           aria-expanded={open}
+          aria-controls="vix-band-scale"
           onClick={(e) => {
             e.stopPropagation();
             setOpen((o) => !o);
@@ -88,7 +89,9 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
 
       {open && (
         <div
+          id="vix-band-scale"
           role="dialog"
+          aria-modal="true"
           aria-label="How VIX maps to market sentiment"
           className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-border/60 bg-surface-elevated p-4 text-left shadow-xl shadow-black/20"
         >
