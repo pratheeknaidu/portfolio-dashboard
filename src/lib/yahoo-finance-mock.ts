@@ -78,3 +78,7 @@ export function getMockQuotes(
 export function getMockSummary(ticker: string): { name: string; sector: string } {
   return KNOWN[ticker] ?? { name: `${ticker} Inc.`, sector: "Unknown" };
 }
+
+export function getMockVix(): { value: number; previousClose: number } {
+  return { value: 18.4, previousClose: 17.9 };
+}

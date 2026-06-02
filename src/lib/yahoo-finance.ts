@@ -1,6 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import type { Quote, TimeRange } from "@/types";
-import { getMockQuotes } from "./yahoo-finance-mock";
+import { getMockQuotes, getMockVix } from "./yahoo-finance-mock";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -14,6 +14,41 @@ const cache = new Map<string, { data: QuotesResult; timestamp: number }>();
 
 export function clearCache() {
   cache.clear();
+  vixCache.clear();
+}
+
+export interface VixResult {
+  value: number;
+  previousClose: number;
+}
+
+const vixCache = new Map<string, { data: VixResult; timestamp: number }>();
+const VIX_CACHE_KEY = "__VIX__";
+
+export async function getVix(): Promise<VixResult | null> {
+  if (process.env.SANDBOX_MODE === "true") {
+    return getMockVix();
+  }
+
+  const cached = vixCache.get(VIX_CACHE_KEY);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const q = await yahooFinance.quote("^VIX");
+    if (q && typeof q.regularMarketPrice === "number") {
+      const data: VixResult = {
+        value: q.regularMarketPrice,
+        previousClose: q.regularMarketPreviousClose ?? q.regularMarketPrice,
+      };
+      vixCache.set(VIX_CACHE_KEY, { data, timestamp: Date.now() });
+      return data;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function rangeToDate(range: TimeRange): Date {
