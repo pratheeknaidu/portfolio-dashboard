@@ -17,6 +17,7 @@ import { CsvImportModal } from "@/components/CsvImportModal";
 import { EmptyPortfolio } from "@/components/EmptyPortfolio";
 import { FailedTickersChip } from "@/components/FailedTickersChip";
 import type { Holding, Quote, PortfolioItem, TimeRange, SizingMode } from "@/types";
+import type { VixApiResponse } from "@/lib/vix-sentiment";
 
 function fmtCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [showImport, setShowImport] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [failedTickers, setFailedTickers] = useState<string[]>([]);
+  const [vix, setVix] = useState<VixApiResponse | null>(null);
 
   const handleSelect = useCallback(
     (item: PortfolioItem | null, rect: TileRect | null) => {
@@ -160,13 +162,32 @@ export default function DashboardPage() {
     }
   }, [getIdToken, range, toast]);
 
+  const fetchVix = useCallback(async () => {
+    const token = await getIdToken();
+    if (!token) return;
+    try {
+      const res = await fetch("/api/market/vix", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data: VixApiResponse = await res.json();
+      setVix(data);
+    } catch (err) {
+      console.error("fetchVix failed:", err);
+    }
+  }, [getIdToken]);
+
   useEffect(() => {
     fetchPortfolio();
+    fetchVix();
     const interval = setInterval(() => {
-      if (isMarketOpen()) fetchPortfolio();
+      if (isMarketOpen()) {
+        fetchPortfolio();
+        fetchVix();
+      }
     }, 60_000);
     return () => clearInterval(interval);
-  }, [fetchPortfolio]);
+  }, [fetchPortfolio, fetchVix]);
 
   const totalCostBasis = items.reduce(
     (sum, i) => sum + i.shares * i.avgCost,
@@ -180,7 +201,7 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen flex flex-col">
-        <Navbar onImportClick={() => setShowImport(true)} />
+        <Navbar onImportClick={() => setShowImport(true)} vix={vix} />
 
         <main className="flex-1 px-4 md:px-8 py-4 md:py-8 max-w-[1400px] w-full mx-auto">
           {/* Row 1: Hero (col-8) + 2 stacked metric cards (col-4) */}

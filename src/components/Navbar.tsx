@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { isMarketOpen } from "@/lib/market-hours";
 import { MobileMenu } from "@/components/MobileMenu";
+import { VixPill } from "@/components/VixPill";
+import type { VixApiResponse } from "@/lib/vix-sentiment";
 
 interface NavbarProps {
   onImportClick: () => void;
+  vix?: VixApiResponse | null;
 }
 
-export function Navbar({ onImportClick }: NavbarProps) {
+export function Navbar({ onImportClick, vix }: NavbarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const marketOpen = isMarketOpen();
@@ -71,6 +74,7 @@ export function Navbar({ onImportClick }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-2.5">
+          <VixPill data={vix ?? null} />
           <span
             className={`hidden md:inline-flex items-center gap-2 h-10 px-3.5 rounded-full text-xs font-medium tracking-wide border ${
               marketOpen
