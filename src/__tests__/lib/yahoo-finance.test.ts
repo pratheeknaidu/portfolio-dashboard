@@ -11,7 +11,7 @@ jest.mock("yahoo-finance2", () => {
 });
 
 import YahooFinance from "yahoo-finance2";
-import { getQuotes, clearCache } from "@/lib/yahoo-finance";
+import { getQuotes, getVix, clearCache } from "@/lib/yahoo-finance";
 
 // Constructor returns the shared { quote, chart } closure used by the
 // production module's single YahooFinance instance — same references.
@@ -117,5 +117,32 @@ describe("getQuotes", () => {
     expect(result.quotes.MSFT).toBeDefined();
     expect(result.quotes.BAD).toBeUndefined();
     expect(result.failed).toEqual(["BAD"]);
+  });
+});
+
+describe("getVix", () => {
+  beforeEach(() => {
+    clearCache();
+    mockQuote.mockReset();
+  });
+
+  it("returns normalized VIX value and previousClose", async () => {
+    mockQuote.mockResolvedValue({
+      symbol: "^VIX",
+      regularMarketPrice: 18.4,
+      regularMarketPreviousClose: 17.9,
+    });
+    const result = await getVix();
+    expect(result).toEqual({ value: 18.4, previousClose: 17.9 });
+  });
+
+  it("returns null when the quote has no price", async () => {
+    mockQuote.mockResolvedValue({ symbol: "^VIX" });
+    expect(await getVix()).toBeNull();
+  });
+
+  it("returns null when Yahoo throws", async () => {
+    mockQuote.mockRejectedValue(new Error("down"));
+    expect(await getVix()).toBeNull();
   });
 });
