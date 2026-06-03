@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { isMarketOpen } from "@/lib/market-hours";
 import { CsvImportModal } from "@/components/CsvImportModal";
+import { AddHoldingModal } from "@/components/AddHoldingModal";
 import { EmptyPortfolio } from "@/components/EmptyPortfolio";
 import { FailedTickersChip } from "@/components/FailedTickersChip";
 import type { Holding, Quote, PortfolioItem, TimeRange, SizingMode } from "@/types";
@@ -46,6 +47,7 @@ export default function DashboardPage() {
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [tileRect, setTileRect] = useState<TileRect | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showAddHolding, setShowAddHolding] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
   const [failedTickers, setFailedTickers] = useState<string[]>([]);
   const [vix, setVix] = useState<VixApiResponse | null>(null);
@@ -209,7 +211,11 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen flex flex-col">
-        <Navbar onImportClick={() => setShowImport(true)} vix={vix} />
+        <Navbar
+          onImportClick={() => setShowImport(true)}
+          onAddClick={() => setShowAddHolding(true)}
+          vix={vix}
+        />
 
         <main className="flex-1 px-4 md:px-8 py-4 md:py-8 max-w-[1400px] w-full mx-auto">
           {/* Row 1: Hero (col-8) + 2 stacked metric cards (col-4) */}
@@ -256,7 +262,10 @@ export default function DashboardPage() {
             <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
             <div className="h-[360px] sm:h-[440px] md:h-[520px] relative">
               {hasFetched && items.length === 0 ? (
-                <EmptyPortfolio onImportClick={() => setShowImport(true)} />
+                <EmptyPortfolio
+                  onImportClick={() => setShowImport(true)}
+                  onAddClick={() => setShowAddHolding(true)}
+                />
               ) : (
                 <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
               )}
@@ -283,8 +292,22 @@ export default function DashboardPage() {
       {showImport && (
         <CsvImportModal
           onClose={() => setShowImport(false)}
+          onAddSingle={() => {
+            setShowImport(false);
+            setShowAddHolding(true);
+          }}
           onSuccess={() => {
             setShowImport(false);
+            fetchPortfolio();
+          }}
+        />
+      )}
+
+      {showAddHolding && (
+        <AddHoldingModal
+          onClose={() => setShowAddHolding(false)}
+          onSuccess={() => {
+            setShowAddHolding(false);
             fetchPortfolio();
           }}
         />

@@ -2,9 +2,10 @@
 
 interface Props {
   onImportClick: () => void;
+  onAddClick?: () => void;
 }
 
-export function EmptyPortfolio({ onImportClick }: Props) {
+export function EmptyPortfolio({ onImportClick, onAddClick }: Props) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-6">
       <div className="w-16 h-16 rounded-full bg-surface-card border border-surface-border flex items-center justify-center mb-6">
@@ -37,6 +38,14 @@ export function EmptyPortfolio({ onImportClick }: Props) {
       >
         Import holdings
       </button>
+      {onAddClick && (
+        <button
+          onClick={onAddClick}
+          className="mt-3 text-sm text-gray-400 hover:text-white transition"
+        >
+          or add a stock manually
+        </button>
+      )}
     </div>
   );
 }

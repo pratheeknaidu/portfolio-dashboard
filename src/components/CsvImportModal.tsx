@@ -7,6 +7,8 @@ import { Sheet } from "@/components/ui/Sheet";
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  /** Switch from bulk import to adding one stock by hand. */
+  onAddSingle?: () => void;
 }
 
 interface ImportResult {
@@ -18,7 +20,7 @@ interface ImportResult {
 
 type ImportMode = "paste" | "csv";
 
-export function CsvImportModal({ onClose, onSuccess }: Props) {
+export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
   const { getIdToken } = useAuth();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,6 +176,18 @@ export function CsvImportModal({ onClose, onSuccess }: Props) {
                 {loading ? "Importing..." : "Import"}
               </button>
             </div>
+            {onAddSingle && (
+              <p className="mt-4 text-center text-xs text-gray-500">
+                Just one position?{" "}
+                <button
+                  type="button"
+                  onClick={onAddSingle}
+                  className="text-accent hover:underline"
+                >
+                  Add a single stock by hand
+                </button>
+              </p>
+            )}
           </>
         ) : (
           <div className="space-y-2 text-sm">
