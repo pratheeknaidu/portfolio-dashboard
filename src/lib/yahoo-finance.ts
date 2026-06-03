@@ -1,6 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 import type { Quote, TimeRange } from "@/types";
 import { getMockQuotes, getMockVix } from "./yahoo-finance-mock";
+import { candidateSymbols } from "./symbols";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
@@ -79,22 +80,33 @@ export async function getQuotes(
   }
 
   const quotes: Record<string, Quote> = {};
+  // Maps the requested ticker → the Yahoo symbol that actually resolved it
+  // (e.g. "ETC" → "ETC-USD"), so the chart pass below fetches history for the
+  // same symbol the spot quote came from.
+  const resolvedSymbol: Record<string, string> = {};
 
-  // Fetch each ticker individually to avoid one bad ticker breaking the batch
+  // Fetch each ticker individually to avoid one bad ticker breaking the batch.
   await Promise.allSettled(
     tickers.map(async (ticker) => {
-      try {
-        const q = await yahooFinance.quote(ticker);
-        if (q && q.regularMarketPrice) {
-          quotes[q.symbol] = {
-            price: q.regularMarketPrice,
-            change: q.regularMarketChange ?? 0,
-            changePercent: q.regularMarketChangePercent ?? 0,
-            previousClose: q.regularMarketPreviousClose ?? 0,
-          };
+      for (const symbol of candidateSymbols(ticker)) {
+        try {
+          const q = await yahooFinance.quote(symbol);
+          if (q && q.regularMarketPrice) {
+            // Key by the requested ticker, not q.symbol: the client looks
+            // quotes up by the holding's ticker (the bare "ETC"), and the
+            // crypto fallback resolves under a different symbol ("ETC-USD").
+            quotes[ticker] = {
+              price: q.regularMarketPrice,
+              change: q.regularMarketChange ?? 0,
+              changePercent: q.regularMarketChangePercent ?? 0,
+              previousClose: q.regularMarketPreviousClose ?? 0,
+            };
+            resolvedSymbol[ticker] = symbol;
+            return;
+          }
+        } catch {
+          // Try the next candidate symbol (e.g. the -USD crypto pair).
         }
-      } catch {
-        // Skip tickers that fail validation
       }
     })
   );
@@ -105,7 +117,7 @@ export async function getQuotes(
       tickers.map(async (ticker) => {
         if (!quotes[ticker]) return;
         try {
-          const chart = await yahooFinance.chart(ticker, { period1: startDate });
+          const chart = await yahooFinance.chart(resolvedSymbol[ticker], { period1: startDate });
           if (chart.quotes.length > 0) {
             const startPrice = chart.quotes[0].close!;
             const currentPrice = quotes[ticker].price;

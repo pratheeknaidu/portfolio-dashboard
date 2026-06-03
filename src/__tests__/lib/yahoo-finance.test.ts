@@ -101,10 +101,14 @@ describe("getQuotes", () => {
   });
 
   it("skips tickers whose quote() rejects without poisoning the batch", async () => {
-    mockQuote.mockImplementation((ticker: string) => {
-      if (ticker === "BAD") return Promise.reject(new Error("Invalid"));
+    mockQuote.mockImplementation((symbol: string) => {
+      // Reject the bare symbol and its -USD crypto fallback so BAD stays
+      // genuinely unresolvable across both candidate lookups.
+      if (symbol === "BAD" || symbol === "BAD-USD") {
+        return Promise.reject(new Error("Invalid"));
+      }
       return Promise.resolve({
-        symbol: ticker,
+        symbol,
         regularMarketPrice: 100,
         regularMarketChange: 1,
         regularMarketChangePercent: 1,
@@ -117,6 +121,88 @@ describe("getQuotes", () => {
     expect(result.quotes.MSFT).toBeDefined();
     expect(result.quotes.BAD).toBeUndefined();
     expect(result.failed).toEqual(["BAD"]);
+  });
+
+  it("resolves a bare crypto symbol via the -USD pair, keyed under the requested ticker", async () => {
+    // Robinhood exports Ethereum Classic as bare "ETC"; Yahoo only quotes it
+    // as "ETC-USD". The bare lookup yields nothing → fall back to the pair.
+    mockQuote.mockImplementation((symbol: string) => {
+      if (symbol === "ETC-USD") {
+        return Promise.resolve({
+          symbol: "ETC-USD",
+          regularMarketPrice: 22.5,
+          regularMarketChange: 0.5,
+          regularMarketChangePercent: 2.27,
+          regularMarketPreviousClose: 22.0,
+        });
+      }
+      return Promise.reject(new Error(`No quote for ${symbol}`));
+    });
+
+    const result = await getQuotes(["ETC"], "1D");
+    expect(result.quotes.ETC).toEqual({
+      price: 22.5,
+      change: 0.5,
+      changePercent: 2.27,
+      previousClose: 22.0,
+    });
+    expect(result.failed).toEqual([]);
+  });
+
+  it("prefers the bare-symbol equity quote and does not query the -USD pair when it succeeds", async () => {
+    mockQuote.mockImplementation((symbol: string) => {
+      if (symbol === "ETC") {
+        return Promise.resolve({
+          symbol: "ETC",
+          regularMarketPrice: 5,
+          regularMarketChange: 0.1,
+          regularMarketChangePercent: 2,
+          regularMarketPreviousClose: 4.9,
+        });
+      }
+      return Promise.reject(new Error(`No quote for ${symbol}`));
+    });
+
+    const result = await getQuotes(["ETC"], "1D");
+    expect(result.quotes.ETC.price).toBe(5);
+    expect(mockQuote).not.toHaveBeenCalledWith("ETC-USD");
+  });
+
+  it("uses the resolved -USD symbol for the non-1D chart history pass", async () => {
+    mockQuote.mockImplementation((symbol: string) => {
+      if (symbol === "ETC-USD") {
+        return Promise.resolve({
+          symbol: "ETC-USD",
+          regularMarketPrice: 22.5,
+          regularMarketPreviousClose: 22.0,
+        });
+      }
+      return Promise.reject(new Error(`No quote for ${symbol}`));
+    });
+    mockChart.mockResolvedValue({
+      quotes: [
+        { date: new Date("2026-05-26"), close: 20 },
+        { date: new Date("2026-06-02"), close: 22.5 },
+      ],
+    });
+
+    const result = await getQuotes(["ETC"], "1W");
+    expect(mockChart).toHaveBeenCalledWith(
+      "ETC-USD",
+      expect.objectContaining({ period1: expect.any(Date) })
+    );
+    expect(result.quotes.ETC.changePercent).toBeCloseTo(12.5, 1);
+    expect(result.failed).toEqual([]);
+  });
+
+  it("reports a symbol as failed only when neither the bare nor the -USD lookup resolves", async () => {
+    mockQuote.mockRejectedValue(new Error("not found"));
+
+    const result = await getQuotes(["NOTACOIN"], "1D");
+    expect(result.quotes.NOTACOIN).toBeUndefined();
+    expect(result.failed).toEqual(["NOTACOIN"]);
+    expect(mockQuote).toHaveBeenCalledWith("NOTACOIN");
+    expect(mockQuote).toHaveBeenCalledWith("NOTACOIN-USD");
   });
 });
 
