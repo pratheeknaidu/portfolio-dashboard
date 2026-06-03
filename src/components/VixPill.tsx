@@ -51,41 +51,40 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
   const title = `VIX ${data.value.toFixed(1)}${message ? ` — ${message}.` : "."} ${DISCLAIMER}`;
 
   return (
-    <div ref={rootRef} className="relative hidden md:inline-flex">
-      <span
+    <div ref={rootRef} className="relative inline-flex">
+      {/* The whole chip is one button so a single tap target works on mobile
+          (compact: value + tone color) and desktop (full: value + message +
+          info icon) alike. The message and icon are md:-only adornments. */}
+      <button
+        type="button"
+        aria-label={`VIX ${data.value.toFixed(1)}${message ? ` — ${message}` : ""}. Show how VIX maps to market sentiment`}
+        aria-expanded={open}
+        aria-controls="vix-band-scale"
         title={title}
-        className={`inline-flex items-center gap-2 h-10 px-3.5 rounded-full text-xs font-medium tracking-wide border ${TONE_STYLES[tone]}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        className={`inline-flex items-center gap-2 h-10 px-3 md:px-3.5 rounded-full text-xs font-medium tracking-wide border transition-colors ${TONE_STYLES[tone]}`}
       >
         <span className="font-semibold">VIX {data.value.toFixed(1)}</span>
-        <span className="opacity-50">·</span>
-        <span>{message}</span>
-        <button
-          type="button"
-          aria-label="How VIX sentiment is inferred"
-          aria-expanded={open}
-          aria-controls="vix-band-scale"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen((o) => !o);
-          }}
-          className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full opacity-60 transition-opacity hover:opacity-100"
+        <span className="hidden opacity-50 md:inline">·</span>
+        <span className="hidden md:inline">{message}</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className="ml-0.5 hidden h-3.5 w-3.5 opacity-60 md:inline-block"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            className="h-3.5 w-3.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-        </button>
-      </span>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      </button>
 
       {open && (
         <div
@@ -93,7 +92,7 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
           role="dialog"
           aria-modal="true"
           aria-label="How VIX maps to market sentiment"
-          className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-border/60 bg-surface-elevated p-4 text-left shadow-xl shadow-black/20"
+          className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border/60 bg-surface-elevated p-4 text-left shadow-xl shadow-black/20"
         >
           <p className="font-display text-sm font-semibold text-foreground">
             How this reads the market

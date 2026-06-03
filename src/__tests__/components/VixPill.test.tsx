@@ -86,4 +86,26 @@ describe("VixPill", () => {
       jest.useRealTimers();
     }
   });
+
+  // --- Mobile: compact chip stays visible; message/icon are desktop-only ---
+
+  it("keeps the chip visible on mobile (root is not hidden below md)", () => {
+    const { container } = render(<VixPill data={sample} />);
+    expect(container.firstChild).toHaveClass("inline-flex");
+    expect(container.firstChild).not.toHaveClass("hidden");
+  });
+
+  it("hides the conversational message on mobile, showing it from md up", () => {
+    render(<VixPill data={sample} />);
+    const message = screen.getByText("Lean into the fear");
+    expect(message).toHaveClass("hidden");
+    expect(message).toHaveClass("md:inline");
+  });
+
+  it("opens the popover when the chip body (not only the icon) is tapped", () => {
+    render(<VixPill data={sample} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("VIX 28.5"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
