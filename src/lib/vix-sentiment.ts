@@ -35,8 +35,8 @@ export interface VixBand extends VixSentiment {
 // Single source of truth: both vixSentiment() and the VixPill info popover
 // render from this list, so the scale only ever needs editing in one place.
 export const VIX_BANDS: VixBand[] = [
-  { lo: -Infinity, hi: 12, band: "<12",  sentiment: "Complacent", action: "Caution — don't chase", message: "Don't chase the rally", strength: "none",        tone: "caution"     },
-  { lo: 12, hi: 15,        band: "12–15", sentiment: "Calm",      action: "Hold",                  message: "Sit tight",            strength: "none",        tone: "neutral"     },
+  { lo: -Infinity, hi: 12, band: "<12",  sentiment: "Complacent", action: "Trim — take profits",   message: "Take some profits",    strength: "none",        tone: "caution"     },
+  { lo: 12, hi: 15,        band: "12–15", sentiment: "Calm",      action: "Hold",                  message: "Let it ride",          strength: "none",        tone: "neutral"     },
   { lo: 15, hi: 18,        band: "15–18", sentiment: "Steady",    action: "Neutral",               message: "Stay the course",      strength: "none",        tone: "neutral"     },
   { lo: 18, hi: 22,        band: "18–22", sentiment: "Watchful",  action: "Mild buy · accumulate", message: "Ease in here",         strength: "weak",        tone: "accumulate"  },
   { lo: 22, hi: 27,        band: "22–27", sentiment: "Unsettled", action: "Buy",                   message: "Start buying",         strength: "building",    tone: "accumulate"  },

@@ -2,8 +2,8 @@ import { vixSentiment, VIX_BANDS } from "@/lib/vix-sentiment";
 
 describe("vixSentiment", () => {
   it.each([
-    [8,    "Complacent", "Caution — don't chase",      "none",        "caution"],
-    [11.99,"Complacent", "Caution — don't chase",      "none",        "caution"],
+    [8,    "Complacent", "Trim — take profits",        "none",        "caution"],
+    [11.99,"Complacent", "Trim — take profits",        "none",        "caution"],
     [12,   "Calm",       "Hold",                       "none",        "neutral"],
     [15,   "Steady",     "Neutral",                    "none",        "neutral"],
     [17.99,"Steady",     "Neutral",                    "none",        "neutral"],
