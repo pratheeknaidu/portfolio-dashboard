@@ -9,6 +9,7 @@ import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { CsvImportModal } from "@/components/CsvImportModal";
+import { AddHoldingModal } from "@/components/AddHoldingModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AnalystSentimentCard } from "@/components/AnalystSentimentCard";
@@ -22,6 +23,7 @@ export default function AnalyticsPage() {
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [valuations, setValuations] = useState<Record<string, ValuationData>>({});
   const [showImport, setShowImport] = useState(false);
+  const [showAddHolding, setShowAddHolding] = useState(false);
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
   const [deleting, setDeleting] = useState<PortfolioItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -114,7 +116,10 @@ export default function AnalyticsPage() {
   return (
     <AuthGuard>
       <div className="flex flex-col h-screen">
-        <Navbar onImportClick={() => setShowImport(true)} />
+        <Navbar
+          onImportClick={() => setShowImport(true)}
+          onAddClick={() => setShowAddHolding(true)}
+        />
         <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6 md:space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
@@ -141,7 +146,20 @@ export default function AnalyticsPage() {
             <ValuationCard items={items} valuations={valuations} />
           </div>
           <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
-            <h2 className="text-lg font-semibold text-white mb-4">Holdings</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">Holdings</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddHolding(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface-bg border border-surface-border text-gray-300 hover:text-white hover:border-accent transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add
+              </button>
+            </div>
             <HoldingsTable
               items={items}
               totalValue={totalValue}
@@ -154,7 +172,14 @@ export default function AnalyticsPage() {
       {showImport && (
         <CsvImportModal
           onClose={() => setShowImport(false)}
+          onAddSingle={() => { setShowImport(false); setShowAddHolding(true); }}
           onSuccess={() => { setShowImport(false); fetchData(); }}
+        />
+      )}
+      {showAddHolding && (
+        <AddHoldingModal
+          onClose={() => setShowAddHolding(false)}
+          onSuccess={() => { setShowAddHolding(false); fetchData(); }}
         />
       )}
       {editing && (
