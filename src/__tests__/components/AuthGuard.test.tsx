@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { AuthGuard } from "@/components/AuthGuard";
+import { DemoProvider } from "@/lib/demo-context";
 
 jest.mock("@/lib/auth-context", () => ({
   useAuth: jest.fn(),
@@ -27,5 +28,17 @@ describe("AuthGuard", () => {
     mockUseAuth.mockReturnValue({ user: { uid: "abc" }, loading: false } as any);
     render(<AuthGuard><div>Protected</div></AuthGuard>);
     expect(screen.getByText("Protected")).toBeInTheDocument();
+  });
+
+  it("bypasses the auth gate in demo mode and shows the demo banner", () => {
+    // No user, not loading — the real app would show the sign-in screen.
+    mockUseAuth.mockReturnValue({ user: null, loading: false, signIn: jest.fn() } as any);
+    render(
+      <DemoProvider>
+        <AuthGuard><div>Protected</div></AuthGuard>
+      </DemoProvider>,
+    );
+    expect(screen.getByText("Protected")).toBeInTheDocument();
+    expect(screen.getByText("Demo")).toBeInTheDocument();
   });
 });

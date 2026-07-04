@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useIsDemo } from "@/lib/demo-context";
 import { isMarketOpen } from "@/lib/market-hours";
 
 interface MobileMenuProps {
@@ -13,6 +14,7 @@ interface MobileMenuProps {
 export function MobileMenu({ open, onClose }: MobileMenuProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
+  const isDemo = useIsDemo();
   const marketOpen = isMarketOpen();
 
   useEffect(() => {
@@ -35,10 +37,15 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
 
   if (!open) return null;
 
-  const tabs = [
-    { href: "/", label: "Dashboard" },
-    { href: "/analytics", label: "Analytics" },
-  ];
+  const tabs = isDemo
+    ? [
+        { href: "/demo", label: "Dashboard" },
+        { href: "/demo/analytics", label: "Analytics" },
+      ]
+    : [
+        { href: "/", label: "Dashboard" },
+        { href: "/analytics", label: "Analytics" },
+      ];
 
   return (
     <div
@@ -94,12 +101,22 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
             <span className={`h-2 w-2 rounded-full ${marketOpen ? "bg-positive" : "bg-muted-foreground/60"}`} />
             {marketOpen ? "Market Open" : "Market Closed"}
           </div>
-          <button
-            onClick={signOut}
-            className="w-full text-left px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-colors"
-          >
-            Sign out
-          </button>
+          {isDemo ? (
+            <Link
+              href="/"
+              onClick={onClose}
+              className="block w-full text-left px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-colors"
+            >
+              Sign in
+            </Link>
+          ) : (
+            <button
+              onClick={signOut}
+              className="w-full text-left px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-colors"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </aside>
     </div>

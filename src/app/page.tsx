@@ -12,6 +12,8 @@ import { AllocationCard } from "@/components/AllocationCard";
 import { MoversCard } from "@/components/MoversCard";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
+import { useIsDemo } from "@/lib/demo-context";
+import { buildDemoItems } from "@/lib/demo-data";
 import { isMarketOpen } from "@/lib/market-hours";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { AddHoldingModal } from "@/components/AddHoldingModal";
@@ -41,6 +43,7 @@ interface QuotesResponse {
 export default function DashboardPage() {
   const { getIdToken } = useAuth();
   const toast = useToast();
+  const isDemo = useIsDemo();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [range, setRange] = useState<TimeRange>("1D");
   const [sizing, setSizing] = useState<SizingMode>("equity");
@@ -69,6 +72,24 @@ export default function DashboardPage() {
     setSelectedItem(null);
     setTileRect(null);
   }, []);
+
+  // In demo mode the write modals would POST without a token and fail, so the
+  // import/add affordances redirect intent to signing in instead.
+  const openImport = useCallback(() => {
+    if (isDemo) {
+      toast.info("Sign in to import your own holdings.");
+      return;
+    }
+    setShowImport(true);
+  }, [isDemo, toast]);
+
+  const openAddHolding = useCallback(() => {
+    if (isDemo) {
+      toast.info("Sign in to add your own holdings.");
+      return;
+    }
+    setShowAddHolding(true);
+  }, [isDemo, toast]);
 
   // Dismiss the pinned tooltip on Escape OR any click outside a tile.
   // Tile onClick handlers call stopPropagation, so clicks that reach the
@@ -100,6 +121,15 @@ export default function DashboardPage() {
   }, [selectedItem, dismissSelection]);
 
   const fetchPortfolio = useCallback(async () => {
+    // Demo mode is fully offline: render the static fixture and skip every
+    // network call, including the snapshot write.
+    if (isDemo) {
+      setItems(buildDemoItems(range));
+      setFailedTickers([]);
+      setHasFetched(true);
+      return;
+    }
+
     const token = await getIdToken();
     if (!token) return;
 
@@ -162,7 +192,7 @@ export default function DashboardPage() {
       toast.error("Network error — couldn't refresh portfolio.");
       setHasFetched(true);
     }
-  }, [getIdToken, range, toast]);
+  }, [getIdToken, range, toast, isDemo]);
 
   const fetchVix = useCallback(async () => {
     const token = await getIdToken();
@@ -212,8 +242,8 @@ export default function DashboardPage() {
     <AuthGuard>
       <div className="min-h-screen flex flex-col">
         <Navbar
-          onImportClick={() => setShowImport(true)}
-          onAddClick={() => setShowAddHolding(true)}
+          onImportClick={openImport}
+          onAddClick={openAddHolding}
           vix={vix}
         />
 
@@ -263,8 +293,8 @@ export default function DashboardPage() {
             <div className="h-[360px] sm:h-[440px] md:h-[520px] relative">
               {hasFetched && items.length === 0 ? (
                 <EmptyPortfolio
-                  onImportClick={() => setShowImport(true)}
-                  onAddClick={() => setShowAddHolding(true)}
+                  onImportClick={openImport}
+                  onAddClick={openAddHolding}
                 />
               ) : (
                 <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
