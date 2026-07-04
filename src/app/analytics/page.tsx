@@ -8,6 +8,8 @@ import { PerformanceChart } from "@/components/PerformanceChart";
 import { HoldingsTable } from "@/components/HoldingsTable";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
+import { useIsDemo } from "@/lib/demo-context";
+import { buildDemoItems, getDemoValuations, DEMO_SNAPSHOTS } from "@/lib/demo-data";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { AddHoldingModal } from "@/components/AddHoldingModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
@@ -19,6 +21,7 @@ import type { Holding, Quote, PortfolioItem, Snapshot, ValuationData } from "@/t
 export default function AnalyticsPage() {
   const { getIdToken } = useAuth();
   const toast = useToast();
+  const isDemo = useIsDemo();
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [valuations, setValuations] = useState<Record<string, ValuationData>>({});
@@ -29,6 +32,14 @@ export default function AnalyticsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    // Demo mode: render the static fixture, no network.
+    if (isDemo) {
+      setItems(buildDemoItems());
+      setValuations(getDemoValuations());
+      setSnapshots(DEMO_SNAPSHOTS);
+      return;
+    }
+
     const token = await getIdToken();
     if (!token) return;
     const headers = { Authorization: `Bearer ${token}` };
@@ -84,7 +95,30 @@ export default function AnalyticsPage() {
       console.error("Analytics fetchData failed:", err);
       toast.error("Network error — couldn't load analytics.");
     }
-  }, [getIdToken, toast]);
+  }, [getIdToken, toast, isDemo]);
+
+  // In demo mode every mutation is redirected to a sign-in nudge instead of
+  // opening a modal that would POST without a token.
+  const openImport = useCallback(() => {
+    if (isDemo) return toast.info("Sign in to import your own holdings.");
+    setShowImport(true);
+  }, [isDemo, toast]);
+
+  const openAddHolding = useCallback(() => {
+    if (isDemo) return toast.info("Sign in to add your own holdings.");
+    setShowAddHolding(true);
+  }, [isDemo, toast]);
+
+  const handleEdit = useCallback((item: PortfolioItem) => {
+    if (isDemo) return toast.info("Sign in to edit your holdings.");
+    setEditing(item);
+  }, [isDemo, toast]);
+
+  const handleDelete = useCallback((item: PortfolioItem) => {
+    if (isDemo) return toast.info("Sign in to remove holdings.");
+    setDeleteError(null);
+    setDeleting(item);
+  }, [isDemo, toast]);
 
   useEffect(() => {
     fetchData();
@@ -117,8 +151,8 @@ export default function AnalyticsPage() {
     <AuthGuard>
       <div className="flex flex-col h-screen">
         <Navbar
-          onImportClick={() => setShowImport(true)}
-          onAddClick={() => setShowAddHolding(true)}
+          onImportClick={openImport}
+          onAddClick={openAddHolding}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6 md:space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -150,7 +184,7 @@ export default function AnalyticsPage() {
               <h2 className="text-lg font-semibold text-white">Holdings</h2>
               <button
                 type="button"
-                onClick={() => setShowAddHolding(true)}
+                onClick={openAddHolding}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface-bg border border-surface-border text-gray-300 hover:text-white hover:border-accent transition"
               >
                 <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -163,8 +197,8 @@ export default function AnalyticsPage() {
             <HoldingsTable
               items={items}
               totalValue={totalValue}
-              onEdit={setEditing}
-              onDelete={(item) => { setDeleteError(null); setDeleting(item); }}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
             />
           </section>
         </main>

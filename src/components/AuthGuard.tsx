@@ -1,10 +1,25 @@
 "use client";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useIsDemo } from "@/lib/demo-context";
+import { DemoBanner } from "@/components/DemoBanner";
 
 const isSandbox = process.env.NEXT_PUBLIC_USE_EMULATOR === "true";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, signIn, signInAsSandbox } = useAuth();
+  const isDemo = useIsDemo();
+
+  // Demo mode renders the app without any Firebase user — data comes from a
+  // static fixture, so we skip the auth gate entirely and show the banner.
+  if (isDemo) {
+    return (
+      <>
+        <DemoBanner />
+        {children}
+      </>
+    );
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen text-gray-400">Loading...</div>;
@@ -28,6 +43,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             Sign in as sandbox user
           </button>
         )}
+        <Link
+          href="/demo"
+          className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Or explore a live demo, no sign-in →
+        </Link>
       </div>
     );
   }

@@ -47,11 +47,8 @@ next-env.d.ts
 # claude code session config
 .claude/
 
-# graphify - commit the outputs but not the derived/per-user state
-graphify-out/cache/
-graphify-out/manifest.json
-graphify-out/cost.json
-graphify-out/.graphify_python
+# graphify - local dependency-graph tooling output (not part of the public repo)
+graphify-out/
 
 # personal data dumps left in repo root
 /latest.csv

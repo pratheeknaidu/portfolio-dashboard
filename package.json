@@ -2,6 +2,8 @@
   "name": "portfolio-dashboard",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "Pratheek Naidu",
   "scripts": {
     "dev": "next dev",
     "dev:emulator": "concurrently \"firebase emulators:start\" \"wait-on tcp:localhost:8080 && next dev\"",

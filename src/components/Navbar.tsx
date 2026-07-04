@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useIsDemo } from "@/lib/demo-context";
 import { isMarketOpen } from "@/lib/market-hours";
 import { MobileMenu } from "@/components/MobileMenu";
 import { VixPill } from "@/components/VixPill";
@@ -17,13 +18,19 @@ interface NavbarProps {
 export function Navbar({ onImportClick, onAddClick, vix }: NavbarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
+  const isDemo = useIsDemo();
   const marketOpen = isMarketOpen();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const tabs: { href: string; label: string }[] = [
-    { href: "/", label: "Dashboard" },
-    { href: "/analytics", label: "Analytics" },
-  ];
+  const tabs: { href: string; label: string }[] = isDemo
+    ? [
+        { href: "/demo", label: "Dashboard" },
+        { href: "/demo/analytics", label: "Analytics" },
+      ]
+    : [
+        { href: "/", label: "Dashboard" },
+        { href: "/analytics", label: "Analytics" },
+      ];
 
   return (
     <>
@@ -145,26 +152,37 @@ export function Navbar({ onImportClick, onAddClick, vix }: NavbarProps) {
             <span className="hidden sm:inline">Import</span>
           </button>
 
-          <button
-            onClick={signOut}
-            aria-label="Sign out"
-            title="Sign out"
-            className="hidden md:inline-flex items-center justify-center h-10 w-10 rounded-full bg-surface-elevated/60 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-4 w-4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {isDemo ? (
+            <Link
+              href="/"
+              aria-label="Sign in"
+              title="Sign in to track your own portfolio"
+              className="hidden md:inline-flex items-center h-10 px-4 rounded-full text-sm font-medium text-foreground bg-surface-elevated/60 border border-border/60 hover:bg-surface-elevated hover:-translate-y-px transition-all"
             >
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-              <path d="M16 17l5-5-5-5" />
-              <path d="M21 12H9" />
-            </svg>
-          </button>
+              Sign in
+            </Link>
+          ) : (
+            <button
+              onClick={signOut}
+              aria-label="Sign out"
+              title="Sign out"
+              className="hidden md:inline-flex items-center justify-center h-10 w-10 rounded-full bg-surface-elevated/60 border border-border/60 text-muted-foreground hover:text-foreground hover:bg-surface-elevated transition-colors"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-4 w-4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
+            </button>
+          )}
         </div>
       </nav>
 
