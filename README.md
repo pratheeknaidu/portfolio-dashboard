@@ -2,6 +2,14 @@
 
 A Finviz-style heatmap for your stock portfolio. Import holdings from Robinhood (CSV or paste), watch them as a treemap sized by equity or P&L, and track daily portfolio value snapshots over time.
 
+**Live demo:** [robinhood-portfolio.vercel.app/demo](https://robinhood-portfolio.vercel.app/demo) — a read-only sample portfolio, no sign-in required.
+
+## Screenshots
+
+| Dashboard heatmap | Analytics |
+| --- | --- |
+| ![Portfolio treemap sized by equity, colored by daily change](docs/images/treemap.png) | ![Snapshot history and allocation charts](docs/images/analytics.png) |
+
 ## Stack
 
 | Layer        | Choice                                                       |
