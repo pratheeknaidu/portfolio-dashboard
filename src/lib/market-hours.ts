@@ -1,3 +1,13 @@
+// YYYY-MM-DD in America/New_York — snapshot doc keys must roll over at ET midnight, not UTC
+export function getEasternDateKey(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
 export function isMarketOpen(now: Date = new Date()): boolean {
   const et = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
