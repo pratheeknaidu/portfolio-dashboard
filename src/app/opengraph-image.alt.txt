@@ -1,0 +1,1 @@
+Portfolio Dashboard — a Finviz-style heatmap of a stock portfolio, with tiles sized by market value and colored by daily change.
