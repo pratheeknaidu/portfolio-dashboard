@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyRequest } from "@/lib/verify-token";
 import { adminDb } from "@/lib/firebase-admin";
+import { getEasternDateKey } from "@/lib/market-hours";
 
 export async function GET(req: NextRequest) {
   const authResult = await verifyRequest(req);
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   const { uid } = authResult;
   const { holdings, totalValue } = await req.json();
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getEasternDateKey();
 
   await adminDb
     .collection("users")
