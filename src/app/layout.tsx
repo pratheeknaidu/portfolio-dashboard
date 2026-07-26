@@ -28,8 +28,17 @@ const monoFont = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://robinhood-portfolio.vercel.app"),
   title: "Portfolio Dashboard",
   description: "Finviz-style treemap for your stock portfolio",
+  openGraph: {
+    title: "Portfolio Dashboard",
+    description:
+      "A Finviz-style heatmap for your stock portfolio — import Robinhood holdings and watch them as a live treemap.",
+    url: "https://robinhood-portfolio.vercel.app",
+    siteName: "Portfolio Dashboard",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
