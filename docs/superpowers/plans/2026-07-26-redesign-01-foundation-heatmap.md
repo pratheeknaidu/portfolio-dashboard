@@ -168,7 +168,12 @@ export function rgbString(c: Rgb): string {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- src/__tests__/lib/design/ramp.test.ts`
-Expected: PASS — but the two `luminance monotonicity` cases will still fail with `Cannot find module '@/lib/design/luminance'`. That module arrives in Task 3; leave those two failing for now and confirm the other five pass.
+
+Expected: **`Test Suites: 1 failed` with `Tests: 0 total`** — not a 5-pass/2-fail split. The `luminance` import is a top-level ES import, hoisted and resolved before any test body runs, so its absence fails the whole suite rather than the two cases that use it.
+
+That is correct and expected at this point. Do not create `luminance.ts` here and do not delete the monotonicity cases. To confirm the ramp itself is right, temporarily copy the five `rampColor` cases into a scratch file with no `luminance` import, run it, and delete the scratch file.
+
+**Ordering consequence:** because this suite cannot run at all until `luminance.ts` exists, **Task 3 must be executed before Task 2** — Task 2's verification step also targets this file. The two are independent (`luminance.ts` imports only the `Rgb` type, already present), so the swap is free.
 
 - [ ] **Step 5: Commit**
 
