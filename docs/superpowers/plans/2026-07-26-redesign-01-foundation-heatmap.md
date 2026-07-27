@@ -2348,7 +2348,11 @@ describe("SegmentedGroup", () => {
 
   it("labels the group so it does not merge with its neighbour", () => {
     render(<SegmentedGroup label="Size" options={opts} value="equity" onChange={jest.fn()} />);
-    expect(screen.getByText("SIZE")).toBeInTheDocument();
+    // The caps are CSS, not content — text-transform never reaches the DOM,
+    // so assert the real text plus the class that uppercases it.
+    const caption = screen.getByText("Size");
+    expect(caption).toBeInTheDocument();
+    expect(caption).toHaveClass("uppercase");
   });
 
   // Undifferentiated, the two groups read as one nine-segment control.
