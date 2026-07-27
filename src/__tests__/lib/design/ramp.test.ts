@@ -29,6 +29,11 @@ describe("rampColor", () => {
   });
 });
 
+/** CIE L*, the perceptually uniform lightness axis. 1.0 is roughly one JND. */
+function lstar(y: number): number {
+  return y > 0.008856 ? 116 * Math.pow(y, 1 / 3) - 16 : 903.3 * y;
+}
+
 describe.each([
   ["RAMP_NORMAL", RAMP_NORMAL],
   ["RAMP_CVD", RAMP_CVD],
@@ -39,5 +44,30 @@ describe.each([
     for (let i = 1; i < lums.length; i++) {
       expect(lums[i]).toBeGreaterThan(lums[i - 1]);
     }
+  });
+
+  it("has no perceptible dip between stops, where a coarse grid cannot look", () => {
+    // rampColor interpolates in sRGB, but luminance sums GAMMA-DECODED
+    // channels, and that decode is convex — so lightness sags below the chord
+    // in mid-segment even when both stops are correctly ordered. A strict
+    // comparison at 0.005 therefore fails on physics, not on a design error.
+    // What must hold is that no sag is VISIBLE, so the bar is one JND of L*.
+    let runningMax = -Infinity;
+    let worstDrawdown = 0;
+    let worstAt = 0;
+    for (let i = 0; i <= 400; i++) {
+      const t = -1 + i * 0.005;
+      const l = lstar(relativeLuminance(rampColor(t, ramp)));
+      runningMax = Math.max(runningMax, l);
+      if (runningMax - l > worstDrawdown) {
+        worstDrawdown = runningMax - l;
+        worstAt = t;
+      }
+    }
+    const verdict =
+      worstDrawdown < 1
+        ? "no perceptible dip"
+        : `dip of ${worstDrawdown.toFixed(2)} L* at t=${worstAt.toFixed(3)}`;
+    expect(verdict).toBe("no perceptible dip");
   });
 });

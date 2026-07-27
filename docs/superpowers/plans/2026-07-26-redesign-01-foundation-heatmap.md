@@ -12,6 +12,24 @@
 
 ---
 
+## Deviations from the design handoff (approved 2026-07-27)
+
+Three of the handoff's published colour values were wrong and have been replaced.
+Verified by dense scan at 0.001 across both ramps, not by the 0.05 grid the
+original tests used — that grid is what hid the defects.
+
+| Handoff value | Replaced with | Why |
+|---|---|---|
+| Dark ink `#06120c` | `#000000` | `#06120c` only clears 4.5:1 from L = 0.1974, while white clears only to L = 0.1833. The gap is a dead band no threshold can fix. Black clears from L = 0.175, which overlaps. |
+| Flip threshold `0.30` | `0.1833` | 0.30 gave white ink to backgrounds up to L = 0.30, failing at ~200 of 2001 samples on each ramp, worst ratio 3.0:1. 0.1833 is the exact WCAG crossover for white. |
+| `RAMP_CVD` loss stops | rescaled in linear light | The `-0.3` stop was brighter than both `-0.1` and the neutral — a 5.5 L\* inversion, so the colourblind ramp was the one that lost magnitude. Rescaling preserves chromaticity exactly, so the orange identity is unchanged. |
+
+`RAMP_NORMAL` is left alone. It has a 0.34 L\* mid-segment sag from sRGB
+interpolation under a convex gamma decode, but that is a third of a JND —
+invisible, and not worth changing a designer's value over.
+
+---
+
 ## File Structure
 
 **Create:**
@@ -84,7 +102,41 @@ describe.each([
       expect(lums[i]).toBeGreaterThan(lums[i - 1]);
     }
   });
+
+  it("has no perceptible dip between stops, where a coarse grid cannot look", () => {
+    // rampColor interpolates in sRGB, but luminance sums GAMMA-DECODED
+    // channels, and that decode is convex — so lightness sags below the chord
+    // in mid-segment even when both stops are correctly ordered. A strict
+    // comparison at 0.005 therefore fails on physics, not on a design error.
+    // What must hold is that no sag is VISIBLE, so the bar is one JND of L*.
+    let runningMax = -Infinity;
+    let worstDrawdown = 0;
+    let worstAt = 0;
+    for (let i = 0; i <= 400; i++) {
+      const t = -1 + i * 0.005;
+      const l = lstar(relativeLuminance(rampColor(t, ramp)));
+      runningMax = Math.max(runningMax, l);
+      if (runningMax - l > worstDrawdown) {
+        worstDrawdown = runningMax - l;
+        worstAt = t;
+      }
+    }
+    const verdict =
+      worstDrawdown < 1
+        ? "no perceptible dip"
+        : `dip of ${worstDrawdown.toFixed(2)} L* at t=${worstAt.toFixed(3)}`;
+    expect(verdict).toBe("no perceptible dip");
+  });
 });
+```
+
+Declare `lstar` above the `describe.each`:
+
+```ts
+/** CIE L*, the perceptually uniform lightness axis. 1.0 is roughly one JND. */
+function lstar(y: number): number {
+  return y > 0.008856 ? 116 * Math.pow(y, 1 / 3) - 16 : 903.3 * y;
+}
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -121,12 +173,21 @@ export const RAMP_NORMAL: Stop[] = [
   [1.0, [168, 240, 198]],
 ];
 
-/** Blue = gain, orange = loss. Same luminance profile as RAMP_NORMAL. */
+/**
+ * Blue = gain, orange = loss.
+ *
+ * The loss-side stops are rescaled in LINEAR light to match RAMP_NORMAL's
+ * luminance at the same positions — scaling linear channels by one factor
+ * preserves chromaticity exactly, so this is the published orange, only
+ * darker. The handoff's original values put the -0.3 stop brighter than both
+ * the -0.1 stop and the neutral, a 5.5 L* inversion: the ramp meant to carry
+ * magnitude for colour-vision-deficient users was the one that lost it.
+ */
 export const RAMP_CVD: Stop[] = [
-  [-1.0, [74, 40, 8]],
-  [-0.6, [122, 66, 14]],
-  [-0.3, [146, 88, 32]],
-  [-0.1, [106, 84, 70]],
+  [-1.0, [55, 29, 5]],
+  [-0.6, [97, 51, 9]],
+  [-0.3, [116, 69, 23]],
+  [-0.1, [107, 85, 71]],
   [0.0, [92, 98, 106]],
   [0.1, [76, 106, 124]],
   [0.3, [50, 124, 176]],
@@ -317,13 +378,27 @@ describe("relativeLuminance", () => {
 
 describe("foregroundFor", () => {
   it("picks dark ink on light tiles and white on dark tiles", () => {
-    expect(foregroundFor([168, 240, 198]).fg).toBe("#06120c");
+    expect(foregroundFor([168, 240, 198]).fg).toBe("#000000");
     expect(foregroundFor([70, 14, 26]).fg).toBe("#ffffff");
   });
 
   it("derives the secondary colour from the primary at ~0.77 alpha", () => {
-    expect(foregroundFor([168, 240, 198]).fg2).toBe("#06120cc4");
+    expect(foregroundFor([168, 240, 198]).fg2).toBe("#000000c4");
     expect(foregroundFor([70, 14, 26]).fg2).toBe("#ffffffc4");
+  });
+
+  it("flips at the luminance where white stops clearing 4.5:1", () => {
+    // White clears 4.5:1 up to L = 1.05/4.5 - 0.05. Straddle that boundary:
+    // a threshold placed anywhere higher hands white ink a background it
+    // cannot carry, which is exactly how the handoff's 0.30 failed.
+    const justUnder = [119, 119, 119] as const; // L = 0.184475 -> dark ink
+    const justOver = [118, 118, 118] as const; // L = 0.181164 -> white ink
+    expect(relativeLuminance(justUnder)).toBeGreaterThan(0.1833);
+    expect(relativeLuminance(justOver)).toBeLessThan(0.1833);
+    expect(foregroundFor(justUnder).fg).toBe("#000000");
+    expect(foregroundFor(justOver).fg).toBe("#ffffff");
+    expect(contrastRatio(justUnder, "#000000")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(justOver, "#ffffff")).toBeGreaterThanOrEqual(4.5);
   });
 });
 
@@ -332,12 +407,17 @@ describe.each([
   ["RAMP_CVD", RAMP_CVD],
 ])("%s tile contrast", (_name, ramp) => {
   it("clears WCAG AA 4.5:1 at every point on the ramp", () => {
-    for (let i = 0; i <= 40; i++) {
-      const t = -1 + i * 0.05;
+    // Sampled at 0.005, not 0.05. The coarse grid is what let the handoff
+    // ship a rule that fails across a ~200-sample-wide band on each ramp.
+    const failures: string[] = [];
+    for (let i = 0; i <= 400; i++) {
+      const t = -1 + i * 0.005;
       const bg = rampColor(t, ramp);
       const { fg } = foregroundFor(bg);
-      expect(contrastRatio(bg, fg)).toBeGreaterThanOrEqual(4.5);
+      const r = contrastRatio(bg, fg);
+      if (r < 4.5) failures.push(`t=${t.toFixed(3)} rgb(${bg}) on ${fg} = ${r.toFixed(3)}`);
     }
+    expect(failures).toEqual([]);
   });
 
   it("beats a fixed white foreground, which fails on light tiles", () => {
@@ -394,9 +474,17 @@ export function contrastRatio(a: Rgb | string, b: Rgb | string): number {
  * A fixed white label is 2.9:1 on the shipped loss tile and 3.1:1 on the gain
  * tile — both fail AA at every size. Flipping on luminance clears 4.5:1 across
  * the whole ramp. `fg2` is the same ink at ~0.77 alpha for secondary lines.
+ *
+ * Both constants below are load-bearing and were derived, not chosen. White
+ * clears 4.5:1 only up to L = 1.05/4.5 - 0.05 = 0.1833, so that is where the
+ * flip has to happen; the handoff's 0.30 left a band of mid-greens and mid-
+ * blues on white ink at ratios as low as 3.0:1. The dark ink is pure black
+ * because it clears from L = 0.175, which overlaps white's ceiling. The
+ * handoff's #06120c only clears from L = 0.1974, leaving 0.1833–0.1974 as a
+ * dead band that no threshold value can rescue.
  */
 export function foregroundFor(c: Rgb): { fg: string; fg2: string } {
-  const fg = relativeLuminance(c) > 0.3 ? "#06120c" : "#ffffff";
+  const fg = relativeLuminance(c) > 0.1833 ? "#000000" : "#ffffff";
   return { fg, fg2: `${fg}c4` };
 }
 ```
@@ -1403,7 +1491,7 @@ describe("TreemapTile contrast", () => {
     const { rerender } = render(
       <TreemapTile {...base} changePercent={5} domain={5} width={200} height={160} />,
     );
-    expect(screen.getByText("AAPL")).toHaveStyle({ color: "#06120c" });
+    expect(screen.getByText("AAPL")).toHaveStyle({ color: "#000000" });
 
     rerender(<TreemapTile {...base} changePercent={-5} domain={5} width={200} height={160} />);
     expect(screen.getByText("AAPL")).toHaveStyle({ color: "#ffffff" });

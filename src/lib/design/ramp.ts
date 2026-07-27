@@ -24,12 +24,21 @@ export const RAMP_NORMAL: Stop[] = [
   [1.0, [168, 240, 198]],
 ];
 
-/** Blue = gain, orange = loss. Same luminance profile as RAMP_NORMAL. */
+/**
+ * Blue = gain, orange = loss.
+ *
+ * The loss-side stops are rescaled in LINEAR light to match RAMP_NORMAL's
+ * luminance at the same positions — scaling linear channels by one factor
+ * preserves chromaticity exactly, so this is the published orange, only
+ * darker. The handoff's original values put the -0.3 stop brighter than both
+ * the -0.1 stop and the neutral, a 5.5 L* inversion: the ramp meant to carry
+ * magnitude for colour-vision-deficient users was the one that lost it.
+ */
 export const RAMP_CVD: Stop[] = [
-  [-1.0, [74, 40, 8]],
-  [-0.6, [122, 66, 14]],
-  [-0.3, [146, 88, 32]],
-  [-0.1, [106, 84, 70]],
+  [-1.0, [55, 29, 5]],
+  [-0.6, [97, 51, 9]],
+  [-0.3, [116, 69, 23]],
+  [-0.1, [107, 85, 71]],
   [0.0, [92, 98, 106]],
   [0.1, [76, 106, 124]],
   [0.3, [50, 124, 176]],
