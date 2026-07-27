@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/Navbar";
 import { Treemap, domainFor } from "@/components/Treemap";
@@ -43,9 +43,11 @@ export default function DashboardPage() {
   const [sizing, setSizing] = useState<SizingMode>("equity");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [tileRect, setTileRect] = useState<TileRect | null>(null);
+  const [cardRect, setCardRect] = useState<TileRect | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [vix, setVix] = useState<VixApiResponse | null>(null);
+  const mapBodyRef = useRef<HTMLDivElement>(null);
 
   const {
     items,
@@ -62,6 +64,12 @@ export default function DashboardPage() {
       } else {
         setSelectedItem(item);
         setTileRect(rect);
+        // Captured at selection time, in the same viewport coordinate space
+        // as `rect`, so tooltipPosition can express one against the other.
+        const box = mapBodyRef.current?.getBoundingClientRect();
+        setCardRect(
+          box ? { top: box.top, left: box.left, width: box.width, height: box.height } : null,
+        );
       }
     },
     [selectedItem],
@@ -151,6 +159,8 @@ export default function DashboardPage() {
     0,
   );
   const totalValue = items.reduce((sum, i) => sum + i.marketValue, 0);
+  const weightPct =
+    selectedItem && totalValue > 0 ? (selectedItem.marketValue / totalValue) * 100 : 0;
   const unrealizedPL = totalValue - totalCostBasis;
   const unrealizedPLPct =
     totalCostBasis > 0 ? (unrealizedPL / totalCostBasis) * 100 : 0;
@@ -207,7 +217,13 @@ export default function DashboardPage() {
               </div>
             </div>
             <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
-            <div className="h-[360px] sm:h-[440px] md:h-[520px] relative">
+            {/* The tooltip positions absolutely against THIS box, so it must
+                live inside it — placement is card-relative, not viewport-
+                relative, which is what keeps it from drifting off the map. */}
+            <div
+              ref={mapBodyRef}
+              className="h-[360px] sm:h-[440px] md:h-[520px] relative"
+            >
               {status === "empty" ? (
                 <EmptyPortfolio
                   onImportClick={openImport}
@@ -221,12 +237,14 @@ export default function DashboardPage() {
                   onSelect={handleSelect}
                 />
               )}
+              <TreemapTooltip
+                item={selectedItem}
+                tileRect={tileRect}
+                cardRect={cardRect}
+                weightPct={weightPct}
+                onClose={dismissSelection}
+              />
             </div>
-            <TreemapTooltip
-              item={selectedItem}
-              tileRect={tileRect}
-              onClose={dismissSelection}
-            />
           </div>
 
           {/* Row 3: Allocation (col-5) + Movers (col-7) */}
