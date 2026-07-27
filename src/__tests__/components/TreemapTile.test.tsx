@@ -4,132 +4,111 @@ jest.mock("@nivo/treemap", () => ({
   ResponsiveTreeMapHtml: () => null,
 }));
 
-import { render, screen, fireEvent } from "@testing-library/react";
-import { TreemapTile, type TreemapTileProps } from "@/components/Treemap";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { TreemapTile } from "@/components/Treemap";
 import type { PortfolioItem } from "@/types";
 
-const baseItem: PortfolioItem = {
+const item: PortfolioItem = {
   ticker: "AAPL",
-  companyName: "Apple",
+  companyName: "Apple Inc.",
   sector: "Technology",
-  shares: 50,
+  shares: 80,
   avgCost: 142.8,
-  addedAt: "",
-  quote: { price: 185.5, change: 2.3, changePercent: 1.25, previousClose: 183.2 },
-  marketValue: 9275,
-  totalPL: 2135,
-  totalPLPercent: 29.9,
+  addedAt: "2026-01-02T00:00:00.000Z",
+  quote: { price: 168.75, change: 1.09, changePercent: 0.65, previousClose: 167.66 },
+  marketValue: 13500,
+  totalPL: 2076,
+  totalPLPercent: 18.16,
 };
 
-const defaultProps: TreemapTileProps = {
-  ticker: "AAPL",
-  changePercent: 1.25,
-  width: 200,
-  height: 100,
+const base = {
+  item,
+  changePercent: 0.65,
+  domain: 1,
+  cvd: false,
+  isMobile: false,
   x: 0,
   y: 0,
-  color: "oklch(0.5 0.1 155)",
-  item: baseItem,
   onSelect: jest.fn(),
 };
 
-const render_ = (overrides: Partial<TreemapTileProps> = {}) =>
-  render(<TreemapTile {...defaultProps} {...overrides} />);
-
-const getTile = () => screen.getByRole("button");
-
-describe("TreemapTile — accessibility (Sprint 4.1)", () => {
-  it("renders as a button with descriptive aria-label", () => {
-    render_();
-    const tile = getTile();
-    expect(tile).toHaveAttribute("aria-label", "AAPL, up 1.3%. Press Enter for details.");
+describe("TreemapTile labels", () => {
+  it("renders ticker, percent and sub-label on a large tile", () => {
+    render(<TreemapTile {...base} width={200} height={160} />);
+    expect(screen.getByText("AAPL")).toBeInTheDocument();
+    expect(screen.getByTestId("tile-percent")).toHaveTextContent("▲0.65%");
+    expect(screen.getByTestId("tile-sub")).toHaveTextContent("$13,500.00");
   });
 
-  it("describes negative moves as 'down'", () => {
-    render_({ changePercent: -2.4 });
-    expect(getTile()).toHaveAttribute("aria-label", "AAPL, down 2.4%. Press Enter for details.");
+  it("drops the sub-label but keeps the percent at medium size", () => {
+    render(<TreemapTile {...base} width={70} height={50} />);
+    expect(screen.getByText("AAPL")).toBeInTheDocument();
+    expect(screen.getByTestId("tile-percent")).toBeInTheDocument();
+    expect(screen.queryByTestId("tile-sub")).not.toBeInTheDocument();
   });
 
-  it("describes zero moves as 'up 0.0%' (sign-neutral)", () => {
-    render_({ changePercent: 0 });
-    expect(getTile()).toHaveAttribute("aria-label", "AAPL, up 0.0%. Press Enter for details.");
+  it("shows the ticker alone on a small tile", () => {
+    render(<TreemapTile {...base} width={40} height={30} />);
+    expect(screen.getByText("AAPL")).toBeInTheDocument();
+    expect(screen.queryByTestId("tile-percent")).not.toBeInTheDocument();
   });
 
-  it("is keyboard focusable (tabIndex 0)", () => {
-    render_();
-    expect(getTile()).toHaveAttribute("tabIndex", "0");
+  it("renders nothing legible below the ticker threshold", () => {
+    render(<TreemapTile {...base} width={20} height={14} />);
+    expect(screen.queryByText("AAPL")).not.toBeInTheDocument();
   });
 });
 
-describe("TreemapTile — keyboard activation (Sprint 4.1)", () => {
-  it("calls onSelect when Enter is pressed", () => {
-    const onSelect = jest.fn();
-    render_({ onSelect });
-    fireEvent.keyDown(getTile(), { key: "Enter" });
-    expect(onSelect).toHaveBeenCalledTimes(1);
-    expect(onSelect.mock.calls[0][0]).toBe(baseItem);
-  });
-
-  it("calls onSelect when Space is pressed", () => {
-    const onSelect = jest.fn();
-    render_({ onSelect });
-    fireEvent.keyDown(getTile(), { key: " " });
-    expect(onSelect).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not call onSelect for unrelated keys", () => {
-    const onSelect = jest.fn();
-    render_({ onSelect });
-    fireEvent.keyDown(getTile(), { key: "ArrowDown" });
-    fireEvent.keyDown(getTile(), { key: "Tab" });
-    expect(onSelect).not.toHaveBeenCalled();
-  });
-
-  it("clicks the tile via mouse click as well (regression)", () => {
-    const onSelect = jest.fn();
-    render_({ onSelect });
-    fireEvent.click(getTile());
-    expect(onSelect).toHaveBeenCalledTimes(1);
+describe("TreemapTile sign encoding", () => {
+  // Sign must never depend on colour alone.
+  it.each([
+    [0.65, "▲"],
+    [-0.42, "▼"],
+    [0, "◆"],
+  ])("prefixes %p with %s", (pct, glyph) => {
+    render(<TreemapTile {...base} changePercent={pct} width={200} height={160} />);
+    expect(screen.getByTestId("tile-percent").textContent).toContain(glyph);
   });
 });
 
-describe("TreemapTile — three-tier label rendering (Sprint 4.3)", () => {
-  it("shows both ticker and percent on a large tile (>= 50x30)", () => {
-    render_({ width: 200, height: 100 });
-    expect(screen.getByText("AAPL")).toBeInTheDocument();
-    expect(screen.getByTestId("tile-percent")).toHaveTextContent("+1.3%");
+describe("TreemapTile accessibility", () => {
+  it("is a real button carrying the full position in its label", () => {
+    render(<TreemapTile {...base} width={200} height={160} />);
+    const tile = screen.getByRole("button");
+    expect(tile).toHaveAccessibleName("AAPL, Apple Inc., $13,500.00, up 0.65% today");
   });
 
-  it("shows ticker-only at the medium tier (32-49 wide OR 18-29 tall)", () => {
-    render_({ width: 40, height: 24 });
-    expect(screen.getByText("AAPL")).toBeInTheDocument();
-    expect(screen.queryByTestId("tile-percent")).not.toBeInTheDocument();
+  it("says 'down' for a loss", () => {
+    render(<TreemapTile {...base} changePercent={-0.42} width={200} height={160} />);
+    expect(screen.getByRole("button")).toHaveAccessibleName(/down 0\.42% today/);
   });
 
-  it("shows ticker-only at the boundary (width >= 32, height >= 18)", () => {
-    render_({ width: 32, height: 18 });
-    expect(screen.getByText("AAPL")).toBeInTheDocument();
-    expect(screen.queryByTestId("tile-percent")).not.toBeInTheDocument();
+  it("selects on click and on Enter", async () => {
+    const onSelect = jest.fn();
+    render(<TreemapTile {...base} onSelect={onSelect} width={200} height={160} />);
+    const tile = screen.getByRole("button");
+    await userEvent.click(tile);
+    expect(onSelect).toHaveBeenCalledWith(item, expect.any(Object));
+    tile.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onSelect).toHaveBeenCalledTimes(2);
   });
 
-  it("hides both labels on very small tiles (< 32 wide OR < 18 tall)", () => {
-    render_({ width: 20, height: 12 });
-    expect(screen.queryByText("AAPL")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("tile-percent")).not.toBeInTheDocument();
+  it("carries a data-ticker hook for arrow-key navigation", () => {
+    render(<TreemapTile {...base} width={200} height={160} />);
+    expect(screen.getByRole("button")).toHaveAttribute("data-ticker", "AAPL");
   });
+});
 
-  it("hides both labels when only one dimension is below threshold", () => {
-    render_({ width: 200, height: 10 });
-    expect(screen.queryByText("AAPL")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("tile-percent")).not.toBeInTheDocument();
-  });
+describe("TreemapTile contrast", () => {
+  it("uses dark ink on a light gain tile and white on a dark loss tile", () => {
+    const { rerender } = render(
+      <TreemapTile {...base} changePercent={5} domain={5} width={200} height={160} />,
+    );
+    expect(screen.getByText("AAPL")).toHaveStyle({ color: "#000000" });
 
-  it("still renders the focusable button container even when labels hide", () => {
-    // Important for accessibility: even tiny tiles must remain navigable
-    // by screen reader / keyboard via their aria-label.
-    render_({ width: 20, height: 12 });
-    const tile = getTile();
-    expect(tile).toBeInTheDocument();
-    expect(tile).toHaveAttribute("aria-label", expect.stringContaining("AAPL"));
+    rerender(<TreemapTile {...base} changePercent={-5} domain={5} width={200} height={160} />);
+    expect(screen.getByText("AAPL")).toHaveStyle({ color: "#ffffff" });
   });
 });

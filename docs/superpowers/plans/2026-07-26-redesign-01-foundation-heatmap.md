@@ -1702,10 +1702,15 @@ describe("nextTile", () => {
   });
 
   it("picks the nearest candidate when tiles are misaligned", () => {
+    // Both candidates sit one row down, so `along` ties and the perpendicular
+    // offset decides. FAR is placed far enough right that its centre is
+    // unambiguously further from BIG's than NEAR's is — with the two only
+    // ~5px apart the winner would be an accident of the fixture, not a
+    // statement about the ranking rule.
     const ragged: NavRect[] = [
       { ticker: "BIG", x: 0, y: 0, w: 200, h: 100 },
-      { ticker: "NEAR", x: 0, y: 100, w: 40, h: 60 },
-      { ticker: "FAR", x: 150, y: 100, w: 50, h: 60 },
+      { ticker: "NEAR", x: 60, y: 100, w: 40, h: 60 },
+      { ticker: "FAR", x: 400, y: 100, w: 50, h: 60 },
     ];
     expect(nextTile(ragged, "BIG", "ArrowDown")).toBe("NEAR");
   });
@@ -1806,10 +1811,17 @@ import type { SizingMode } from "@/types";
 /**
  * Area for a tile. In P&L mode a floor of 0.4% of portfolio value keeps a
  * near-break-even position from vanishing entirely.
+ *
+ * The magnitude is `shares * quote.change`, NOT `totalPL`. `quote.change` is
+ * range-aware — the hook rewrites it to `price - avgCost` in ALL mode — so
+ * this keeps P&L sizing in step with the selected time range. `totalPL` is
+ * always lifetime, which would make the 1D map show lifetime areas.
+ * Treemap.test.tsx asserts this explicitly; an earlier draft of this plan
+ * used totalPL and regressed it.
  */
 function sizeOf(item: PortfolioItem, sizing: SizingMode, total: number): number {
   if (sizing !== "profit") return item.marketValue;
-  return Math.max(Math.abs(item.totalPL), total * 0.004);
+  return Math.max(Math.abs(item.shares * item.quote.change), total * 0.004);
 }
 
 interface Props {
@@ -1904,7 +1916,7 @@ Move the `PortfolioItem` import to the top of the file with the other type impor
 
 - [ ] **Step 6: Update `src/__tests__/components/Treemap.test.tsx`**
 
-The existing suite renders `<Treemap items sizing onSelect />`. Add the required `domain` prop to every render call and wrap each in `<PreferencesProvider>`:
+The existing suite renders `<Treemap items sizing onSelect />`. Add the required `domain` prop to every render call and wrap each in `<PreferencesProvider>`. `Treemap` now calls `useIsMobile`, so the suite also needs the repo's usual `matchMedia` stub (copy the `beforeAll` block from `TreemapTooltip.test.tsx`) — without it every render throws.
 
 ```tsx
 import { PreferencesProvider } from "@/lib/preferences-context";

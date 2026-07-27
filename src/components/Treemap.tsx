@@ -1,90 +1,91 @@
 "use client";
+import { useCallback, useRef } from "react";
 import { ResponsiveTreeMapHtml } from "@nivo/treemap";
+import { rampColor, rgbString, RAMP_NORMAL, RAMP_CVD, niceDomain } from "@/lib/design/ramp";
+import { nextTile, type NavRect } from "@/lib/design/tile-nav";
+import { usePreferences } from "@/lib/preferences-context";
+import { useIsMobile } from "@/lib/use-is-mobile";
+import { foregroundFor } from "@/lib/design/luminance";
+import { labelTier, tileFontSize } from "@/lib/design/tiles";
+import { money, signedMoney } from "@/lib/design/format";
 import type { PortfolioItem, SizingMode } from "@/types";
 import type { TileRect } from "./TreemapTooltip";
-
-function getColor(changePercent: number): string {
-  const MAX_MAGNITUDE = 3;
-  const t = Math.min(Math.abs(changePercent) / MAX_MAGNITUDE, 1);
-  // Lightness ramps darker as magnitude grows; chroma grows for more saturation
-  // at the extremes. Hues mirror the --positive (155) and --negative (25) tokens.
-  const lightness = 0.62 - t * 0.22;
-  const chroma = 0.08 + t * 0.13;
-  const hue = changePercent >= 0 ? 155 : 25;
-  return `oklch(${lightness.toFixed(3)} ${chroma.toFixed(3)} ${hue})`;
-}
-
-function sizeOf(item: PortfolioItem, sizing: SizingMode): number {
-  // `quote.change` is range-aware (lifetime in ALL mode — see page.tsx),
-  // so this keeps profit-mode sizing in sync with the selected time range.
-  return sizing === "profit"
-    ? Math.abs(item.shares * item.quote.change)
-    : item.marketValue;
-}
 
 /**
  * Individual treemap tile. Exported separately so the keyboard + a11y
  * behavior is unit-testable without going through Nivo's render path.
  */
 export interface TreemapTileProps {
-  ticker: string;
+  item: PortfolioItem;
   changePercent: number;
+  /** The clamp domain in percent, from niceDomain(). */
+  domain: number;
+  cvd: boolean;
+  isMobile: boolean;
   width: number;
   height: number;
   x: number;
   y: number;
-  color: string;
-  item: PortfolioItem;
+  /** When set, the sub-label shows signed P&L instead of market value. */
+  showPL?: boolean;
   onSelect: (item: PortfolioItem, rect: TileRect) => void;
 }
 
 export function TreemapTile({
-  ticker,
+  item,
   changePercent,
+  domain,
+  cvd,
+  isMobile,
   width,
   height,
   x,
   y,
-  color,
-  item,
+  showPL = false,
   onSelect,
 }: TreemapTileProps) {
-  const raw = Number(changePercent ?? 0);
-  const pct = Math.abs(raw).toFixed(1);
-  const sign = raw > 0 ? "+" : raw < 0 ? "−" : "";
-  // Three-tier label rendering. On mobile / narrow viewports, packed
-  // treemaps produce many small tiles — showing just the ticker (no
-  // percent) at the medium size is more readable than hiding both,
-  // which was the old behavior at anything under 50×30px.
-  const showBoth = width >= 50 && height >= 30;
-  const showTickerOnly = !showBoth && width >= 32 && height >= 18;
+  const raw = Number.isFinite(changePercent) ? changePercent : 0;
+  const bg = rampColor(raw / domain, cvd ? RAMP_CVD : RAMP_NORMAL);
+  const { fg, fg2 } = foregroundFor(bg);
+  const tier = labelTier(width, height, isMobile);
+  const size = tileFontSize(width, height);
+
+  // Sign is carried by a glyph as well as by colour, so it survives greyscale
+  // and every form of colour vision deficiency.
+  const glyph = raw > 0 ? "\u25b2" : raw < 0 ? "\u25bc" : "\u25c6";
+  const direction = raw > 0 ? "up" : raw < 0 ? "down" : "flat";
+  const sub = showPL ? signedMoney(item.totalPL) : money(item.marketValue);
+
   const select = (target: HTMLElement) => {
     const r = target.getBoundingClientRect();
     onSelect(item, { top: r.top, left: r.left, width: r.width, height: r.height });
   };
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={`${ticker}, ${raw >= 0 ? "up" : "down"} ${pct}%. Press Enter for details.`}
-      data-ticker={ticker}
+    <button
+      type="button"
+      data-ticker={item.ticker}
+      aria-label={`${item.ticker}, ${item.companyName}, ${money(item.marketValue)}, ${direction} ${Math.abs(raw).toFixed(2)}% today`}
+      className="rd-focusable"
       style={{
         position: "absolute",
         top: y,
         left: x,
         width,
         height,
-        background: color,
+        background: rgbString(bg),
+        border: "none",
+        padding: 0,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
-        borderRadius: 10,
-        boxShadow: "inset 0 1px 0 0 oklch(1 0 0 / 0.08)",
-        transition: "transform 150ms ease, filter 150ms ease",
-        outline: "none",
+        borderRadius: 6,
+        // The only transition in the design. This is a glanceable data view;
+        // animation is a liability.
+        transition: "filter .12s",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.filter = "brightness(1.08)";
@@ -92,122 +93,149 @@ export function TreemapTile({
       onMouseLeave={(e) => {
         e.currentTarget.style.filter = "brightness(1)";
       }}
-      onFocus={(e) => {
-        // Visible focus ring so keyboard users see what's targeted
-        e.currentTarget.style.boxShadow =
-          "inset 0 1px 0 0 oklch(1 0 0 / 0.08), 0 0 0 2px oklch(0.85 0.15 90 / 0.9)";
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.boxShadow = "inset 0 1px 0 0 oklch(1 0 0 / 0.08)";
-      }}
       onClick={(e) => {
         e.stopPropagation();
         select(e.currentTarget);
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          e.stopPropagation();
-          select(e.currentTarget);
-        }
-      }}
     >
-      {showBoth && (
-        <>
-          <span
-            style={{
-              color: "oklch(0.98 0.01 90)",
-              fontFamily: "var(--font-display), system-ui, sans-serif",
-              fontWeight: 600,
-              letterSpacing: "-0.01em",
-              fontSize: Math.min(15, width / 6),
-              lineHeight: 1.15,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {ticker}
-          </span>
-          <span
-            style={{
-              color: "oklch(1 0 0 / 0.78)",
-              fontFamily: "var(--font-mono), ui-monospace, monospace",
-              fontSize: Math.min(11, width / 8.5),
-              lineHeight: 1.2,
-              whiteSpace: "nowrap",
-              marginTop: 2,
-            }}
-            data-testid="tile-percent"
-          >
-            {sign}{pct}%
-          </span>
-        </>
-      )}
-      {showTickerOnly && (
+      {tier !== "none" && (
         <span
           style={{
-            color: "oklch(0.98 0.01 90)",
-            fontFamily: "var(--font-display), system-ui, sans-serif",
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
-            fontSize: Math.min(11, width / 4),
-            lineHeight: 1,
+            color: fg,
+            fontFamily: "var(--font-mono), ui-monospace, monospace",
+            fontWeight: 700,
+            fontSize: size,
+            lineHeight: 1.1,
             whiteSpace: "nowrap",
           }}
         >
-          {ticker}
+          {item.ticker}
         </span>
       )}
-    </div>
+      {(tier === "percent" || tier === "full") && (
+        <span
+          data-testid="tile-percent"
+          style={{
+            color: fg,
+            fontFamily: "var(--font-mono), ui-monospace, monospace",
+            fontSize: Math.max(11, size * 0.62),
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1.2,
+            marginTop: 2,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {glyph}
+          {Math.abs(raw).toFixed(2)}%
+        </span>
+      )}
+      {tier === "full" && (
+        <span
+          data-testid="tile-sub"
+          style={{
+            color: fg2,
+            fontFamily: "var(--font-mono), ui-monospace, monospace",
+            fontSize: Math.max(11, size * 0.52),
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1.2,
+            marginTop: 3,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {sub}
+        </span>
+      )}
+    </button>
   );
+}
+
+/**
+ * Area for a tile. In P&L mode a floor of 0.4% of portfolio value keeps a
+ * near-break-even position from vanishing entirely.
+ *
+ * The magnitude is `shares * quote.change`, NOT `totalPL`. `quote.change` is
+ * range-aware — the hook rewrites it to `price - avgCost` in ALL mode — so
+ * this keeps P&L sizing in step with the selected time range. `totalPL` is
+ * always lifetime, which would make the 1D map show lifetime areas.
+ */
+function sizeOf(item: PortfolioItem, sizing: SizingMode, total: number): number {
+  if (sizing !== "profit") return item.marketValue;
+  return Math.max(Math.abs(item.shares * item.quote.change), total * 0.004);
 }
 
 interface Props {
   items: PortfolioItem[];
   sizing: SizingMode;
+  /** Clamp domain in percent. Derived by the caller so the legend agrees. */
+  domain: number;
   onSelect: (item: PortfolioItem | null, rect: TileRect | null) => void;
 }
 
-export function Treemap({ items, sizing, onSelect }: Props) {
+export function Treemap({ items, sizing, domain, onSelect }: Props) {
+  const { cvd } = usePreferences();
+  const isMobile = useIsMobile();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const total = items.reduce((s, i) => s + i.marketValue, 0);
+
   const data = {
     id: "portfolio",
     children: [...items]
-      .sort((a, b) => sizeOf(b, sizing) - sizeOf(a, sizing))
-      .map((item) => ({
-        id: item.ticker,
-        value: sizeOf(item, sizing),
-        changePercent: item.quote.changePercent,
-        color: getColor(item.quote.changePercent),
-        item,
-      })),
+      .sort((a, b) => sizeOf(b, sizing, total) - sizeOf(a, sizing, total))
+      .map((item) => ({ id: item.ticker, value: sizeOf(item, sizing, total), item })),
   };
 
+  // Arrow keys move focus between tiles. Without this the primary data view is
+  // unreachable without a mouse.
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const current = target.dataset?.ticker;
+    if (!current || !containerRef.current) return;
+
+    const tiles = Array.from(
+      containerRef.current.querySelectorAll<HTMLElement>("[data-ticker]"),
+    );
+    const rects: NavRect[] = tiles.map((el) => ({
+      ticker: el.dataset.ticker as string,
+      x: el.offsetLeft,
+      y: el.offsetTop,
+      w: el.offsetWidth,
+      h: el.offsetHeight,
+    }));
+
+    const next = nextTile(rects, current, e.key);
+    if (next === null) return;
+    e.preventDefault();
+    tiles.find((el) => el.dataset.ticker === next)?.focus();
+  }, []);
+
   return (
-    <div className="w-full h-full">
+    <div ref={containerRef} className="w-full h-full" onKeyDown={handleKeyDown}>
       <ResponsiveTreeMapHtml
         data={data}
         identity="id"
         value="value"
         tile="squarify"
         innerPadding={2}
-        outerPadding={4}
-        colors={(node) => (node.data as Record<string, string>).color}
+        outerPadding={0}
         borderWidth={0}
         leavesOnly={true}
         label={() => ""}
         labelSkipSize={0}
         nodeComponent={({ node }) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const d = node.data as any;
+          const item = (node.data as unknown as { item: PortfolioItem }).item;
           return (
             <TreemapTile
-              ticker={String(node.id)}
-              changePercent={Number(d.changePercent ?? 0)}
+              item={item}
+              changePercent={item.quote.changePercent}
+              domain={domain}
+              cvd={cvd}
+              isMobile={isMobile}
               width={node.width}
               height={node.height}
               x={node.x}
               y={node.y}
-              color={node.color}
-              item={d.item}
+              showPL={sizing === "profit"}
               onSelect={onSelect}
             />
           );
@@ -215,4 +243,9 @@ export function Treemap({ items, sizing, onSelect }: Props) {
       />
     </div>
   );
+}
+
+/** Clamp domain for a set of items — exported so the legend and caption agree. */
+export function domainFor(items: PortfolioItem[]): number {
+  return niceDomain(items.map((i) => i.quote.changePercent));
 }

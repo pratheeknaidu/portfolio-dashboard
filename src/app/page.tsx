@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/Navbar";
-import { Treemap } from "@/components/Treemap";
+import { Treemap, domainFor } from "@/components/Treemap";
 import { TreemapTooltip, type TileRect } from "@/components/TreemapTooltip";
 import { TimeRangeToggle } from "@/components/TimeRangeToggle";
 import { SizingToggle } from "@/components/SizingToggle";
@@ -214,7 +214,12 @@ export default function DashboardPage() {
                   onAddClick={openAddHolding}
                 />
               ) : (
-                <Treemap items={items} sizing={sizing} onSelect={handleSelect} />
+                <Treemap
+                  items={items}
+                  sizing={sizing}
+                  domain={domainFor(items)}
+                  onSelect={handleSelect}
+                />
               )}
             </div>
             <TreemapTooltip
