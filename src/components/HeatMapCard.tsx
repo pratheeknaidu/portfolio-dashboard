@@ -20,8 +20,8 @@ export function SegmentedGroup<T extends string>({
   onChange,
 }: SegmentedProps<T>) {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-rd-dim">
+    <div className="flex items-center gap-2.5 shrink-0">
+      <span className="font-mono text-[10px] tracking-[0.1em] uppercase text-rd-dim shrink-0">
         {label}
       </span>
       <div
@@ -108,7 +108,11 @@ export function HeatMapCard({
             {range} change, clamped ±{domain}%
           </p>
         </div>
-        <div className="flex items-center gap-[18px] flex-wrap">
+        {/* COLOUR is seven segments; at 375px the two groups need ~409px and
+            overflow the card, clipping 1Y and ALL out of reach. Scrolling the
+            control strip keeps every range tappable without wrapping a
+            segmented control mid-run, which reads as broken. */}
+        <div className="flex items-center gap-[18px] overflow-x-auto lg:overflow-x-visible lg:flex-wrap -mx-1 px-1 py-0.5">
           <SegmentedGroup
             label="Size"
             options={SIZE_OPTIONS}
