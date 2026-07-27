@@ -13,13 +13,13 @@ import { MoversCard } from "@/components/MoversCard";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
-import { buildDemoItems } from "@/lib/demo-data";
 import { isMarketOpen } from "@/lib/market-hours";
+import { usePortfolioData } from "@/lib/use-portfolio-data";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { AddHoldingModal } from "@/components/AddHoldingModal";
 import { EmptyPortfolio } from "@/components/EmptyPortfolio";
 import { FailedTickersChip } from "@/components/FailedTickersChip";
-import type { Holding, Quote, PortfolioItem, TimeRange, SizingMode } from "@/types";
+import type { PortfolioItem, TimeRange, SizingMode } from "@/types";
 import type { VixApiResponse } from "@/lib/vix-sentiment";
 
 function fmtCurrency(n: number): string {
@@ -35,25 +35,24 @@ function fmtCurrencySigned(n: number): string {
   return n >= 0 ? `+${formatted}` : `−${formatted}`;
 }
 
-interface QuotesResponse {
-  quotes: Record<string, Quote>;
-  failed: string[];
-}
-
 export default function DashboardPage() {
   const { getIdToken } = useAuth();
   const toast = useToast();
   const isDemo = useIsDemo();
-  const [items, setItems] = useState<PortfolioItem[]>([]);
   const [range, setRange] = useState<TimeRange>("1D");
   const [sizing, setSizing] = useState<SizingMode>("equity");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [tileRect, setTileRect] = useState<TileRect | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
-  const [hasFetched, setHasFetched] = useState(false);
-  const [failedTickers, setFailedTickers] = useState<string[]>([]);
   const [vix, setVix] = useState<VixApiResponse | null>(null);
+
+  const {
+    items,
+    failed: failedTickers,
+    status,
+    refresh: fetchPortfolio,
+  } = usePortfolioData(range);
 
   const handleSelect = useCallback(
     (item: PortfolioItem | null, rect: TileRect | null) => {
@@ -120,80 +119,6 @@ export default function DashboardPage() {
     };
   }, [selectedItem, dismissSelection]);
 
-  const fetchPortfolio = useCallback(async () => {
-    // Demo mode is fully offline: render the static fixture and skip every
-    // network call, including the snapshot write.
-    if (isDemo) {
-      setItems(buildDemoItems(range));
-      setFailedTickers([]);
-      setHasFetched(true);
-      return;
-    }
-
-    const token = await getIdToken();
-    if (!token) return;
-
-    const headers = { Authorization: `Bearer ${token}` };
-
-    try {
-      const holdingsRes = await fetch("/api/portfolio", { headers });
-      if (!holdingsRes.ok) {
-        toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
-        setItems([]); setHasFetched(true); return;
-      }
-      const holdings: Holding[] = await holdingsRes.json();
-      if (!Array.isArray(holdings) || holdings.length === 0) { setItems([]); setHasFetched(true); return; }
-
-      const tickers = holdings.map((h) => h.ticker).join(",");
-      const quotesUrl = range === "ALL"
-        ? `/api/quotes?tickers=${tickers}`
-        : `/api/quotes?tickers=${tickers}&range=${range}`;
-      const quotesRes = await fetch(quotesUrl, { headers });
-      if (!quotesRes.ok) {
-        toast.error(`Quotes service is unavailable. Showing last-known values.`);
-        setHasFetched(true);
-        return;
-      }
-      const { quotes, failed }: QuotesResponse = await quotesRes.json();
-      setFailedTickers(failed ?? []);
-
-      const merged: PortfolioItem[] = holdings
-        .filter((h) => quotes[h.ticker])
-        .map((h) => {
-          const q = quotes[h.ticker];
-          const marketValue = h.shares * q.price;
-          const costBasis = h.shares * h.avgCost;
-          const totalPL = marketValue - costBasis;
-          const totalPLPercent = (totalPL / costBasis) * 100;
-          const quote: Quote = range === "ALL"
-            ? { ...q, change: q.price - h.avgCost, changePercent: totalPLPercent }
-            : q;
-          return {
-            ...h,
-            quote,
-            marketValue,
-            totalPL,
-            totalPLPercent,
-          };
-        });
-
-      setItems(merged);
-      setHasFetched(true);
-
-      const totalValue = merged.reduce((sum, i) => sum + i.marketValue, 0);
-      const holdingsMap = Object.fromEntries(merged.map((i) => [i.ticker, i.marketValue]));
-      await fetch("/api/snapshot", {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({ totalValue, holdings: holdingsMap }),
-      });
-    } catch (err) {
-      console.error("fetchPortfolio failed:", err);
-      toast.error("Network error — couldn't refresh portfolio.");
-      setHasFetched(true);
-    }
-  }, [getIdToken, range, toast, isDemo]);
-
   const fetchVix = useCallback(async () => {
     const token = await getIdToken();
     if (!token) return;
@@ -208,14 +133,6 @@ export default function DashboardPage() {
       console.error("fetchVix failed:", err);
     }
   }, [getIdToken]);
-
-  useEffect(() => {
-    fetchPortfolio();
-    const interval = setInterval(() => {
-      if (isMarketOpen()) fetchPortfolio();
-    }, 60_000);
-    return () => clearInterval(interval);
-  }, [fetchPortfolio]);
 
   // VIX is independent of the selected time range, so keep it on its own
   // effect/timer — otherwise a range toggle (which changes fetchPortfolio's
@@ -291,7 +208,7 @@ export default function DashboardPage() {
             </div>
             <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
             <div className="h-[360px] sm:h-[440px] md:h-[520px] relative">
-              {hasFetched && items.length === 0 ? (
+              {status === "empty" ? (
                 <EmptyPortfolio
                   onImportClick={openImport}
                   onAddClick={openAddHolding}
