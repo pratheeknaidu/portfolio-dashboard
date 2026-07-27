@@ -1,11 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/Navbar";
-import { Treemap, domainFor } from "@/components/Treemap";
-import { TreemapTooltip, type TileRect } from "@/components/TreemapTooltip";
-import { TimeRangeToggle } from "@/components/TimeRangeToggle";
-import { SizingToggle } from "@/components/SizingToggle";
+import { HeatMapCard } from "@/components/HeatMapCard";
+import type { TileRect } from "@/components/TreemapTooltip";
 import { PortfolioHeroCard } from "@/components/PortfolioHeroCard";
 import { MetricCard } from "@/components/MetricCard";
 import { AllocationCard } from "@/components/AllocationCard";
@@ -43,11 +41,9 @@ export default function DashboardPage() {
   const [sizing, setSizing] = useState<SizingMode>("equity");
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
   const [tileRect, setTileRect] = useState<TileRect | null>(null);
-  const [cardRect, setCardRect] = useState<TileRect | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [vix, setVix] = useState<VixApiResponse | null>(null);
-  const mapBodyRef = useRef<HTMLDivElement>(null);
 
   const {
     items,
@@ -64,12 +60,6 @@ export default function DashboardPage() {
       } else {
         setSelectedItem(item);
         setTileRect(rect);
-        // Captured at selection time, in the same viewport coordinate space
-        // as `rect`, so tooltipPosition can express one against the other.
-        const box = mapBodyRef.current?.getBoundingClientRect();
-        setCardRect(
-          box ? { top: box.top, left: box.left, width: box.width, height: box.height } : null,
-        );
       }
     },
     [selectedItem],
@@ -159,8 +149,6 @@ export default function DashboardPage() {
     0,
   );
   const totalValue = items.reduce((sum, i) => sum + i.marketValue, 0);
-  const weightPct =
-    selectedItem && totalValue > 0 ? (selectedItem.marketValue / totalValue) * 100 : 0;
   const unrealizedPL = totalValue - totalCostBasis;
   const unrealizedPLPct =
     totalCostBasis > 0 ? (unrealizedPL / totalCostBasis) * 100 : 0;
@@ -200,52 +188,27 @@ export default function DashboardPage() {
           {/* Tooltip dismiss is handled at document level (see useEffect
               above) so clicks anywhere outside a tile — including on the
               Sidebar, Navbar, or other cards — also dismiss. */}
-          <div className="bento-card p-5 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground">
-                  Heat Map
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Tile size by {sizing === "equity" ? "market value" : "profit"} ·
-                  color by {range} change
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <SizingToggle selected={sizing} onChange={setSizing} />
-                <TimeRangeToggle selected={range} onChange={setRange} />
-              </div>
+          {status === "empty" ? (
+            <div className="bento-card p-5 mb-4">
+              <EmptyPortfolio onImportClick={openImport} onAddClick={openAddHolding} />
             </div>
-            <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
-            {/* The tooltip positions absolutely against THIS box, so it must
-                live inside it — placement is card-relative, not viewport-
-                relative, which is what keeps it from drifting off the map. */}
-            <div
-              ref={mapBodyRef}
-              className="h-[360px] sm:h-[440px] md:h-[520px] relative"
-            >
-              {status === "empty" ? (
-                <EmptyPortfolio
-                  onImportClick={openImport}
-                  onAddClick={openAddHolding}
-                />
-              ) : (
-                <Treemap
-                  items={items}
-                  sizing={sizing}
-                  domain={domainFor(items)}
-                  onSelect={handleSelect}
-                />
-              )}
-              <TreemapTooltip
-                item={selectedItem}
-                tileRect={tileRect}
-                cardRect={cardRect}
-                weightPct={weightPct}
-                onClose={dismissSelection}
-              />
+          ) : (
+            <div className="mb-4">
+              <HeatMapCard
+                items={items}
+                sizing={sizing}
+                range={range}
+                onSizingChange={setSizing}
+                onRangeChange={setRange}
+                onSelect={handleSelect}
+                selected={selectedItem}
+                selectedRect={tileRect}
+                onDismiss={dismissSelection}
+              >
+                <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
+              </HeatMapCard>
             </div>
-          </div>
+          )}
 
           {/* Row 3: Allocation (col-5) + Movers (col-7) */}
           <div className="grid grid-cols-12 gap-4">
