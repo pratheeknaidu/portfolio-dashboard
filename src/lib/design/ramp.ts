@@ -75,3 +75,27 @@ export function rampColor(t: number, stops: Stop[]): Rgb {
 export function rgbString(c: Rgb): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
+
+/**
+ * The ladder of round domain values. A quiet day lands on ±1%; an all-time
+ * view lands on ±80%. Always print the chosen value in the legend and caption:
+ * without it, a strong day and a flat one look identical.
+ */
+export const NICE_DOMAINS = [
+  0.5, 1, 2, 3, 5, 8, 12, 20, 30, 50, 80, 120, 200,
+] as const;
+
+/**
+ * Smallest nice domain covering the largest absolute change in the data.
+ *
+ * Non-finite values are filtered FIRST and deliberately. A single failed quote
+ * yielding NaN would otherwise poison Math.max, make every `max <= n`
+ * comparison false, and saturate the domain to 200 — collapsing the entire map
+ * to neutral grey with no visible error.
+ */
+export function niceDomain(values: number[]): number {
+  const finite = values.filter((v) => Number.isFinite(v)).map(Math.abs);
+  if (finite.length === 0) return NICE_DOMAINS[0];
+  const max = Math.max(...finite);
+  return NICE_DOMAINS.find((n) => max <= n) ?? 200;
+}

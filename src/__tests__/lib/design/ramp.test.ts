@@ -1,4 +1,11 @@
-import { RAMP_NORMAL, RAMP_CVD, rampColor, rgbString } from "@/lib/design/ramp";
+import {
+  RAMP_NORMAL,
+  RAMP_CVD,
+  rampColor,
+  rgbString,
+  niceDomain,
+  NICE_DOMAINS,
+} from "@/lib/design/ramp";
 import { relativeLuminance } from "@/lib/design/luminance";
 
 describe("rampColor", () => {
@@ -69,5 +76,41 @@ describe.each([
         ? "no perceptible dip"
         : `dip of ${worstDrawdown.toFixed(2)} L* at t=${worstAt.toFixed(3)}`;
     expect(verdict).toBe("no perceptible dip");
+  });
+});
+
+describe("niceDomain", () => {
+  it.each([
+    [[0.2, -0.4, 0.31], 0.5],
+    [[0.9, -0.2], 1],
+    [[-1.4, 0.8], 2],
+    [[2.6, -1.1], 3],
+    [[4.9], 5],
+    [[7.2, -3], 8],
+    [[68, -12], 80],
+    [[241, -30], 200], // beyond the largest nice value: saturate, don't crash
+  ])("picks the first nice value that covers %p", (values, expected) => {
+    expect(niceDomain(values)).toBe(expected);
+  });
+
+  it("uses absolute magnitude, so a big loss widens the domain", () => {
+    expect(niceDomain([-11.2, 0.3])).toBe(12);
+  });
+
+  it("ignores non-finite values so one bad quote can't collapse the map", () => {
+    // Without the isFinite guard Math.max returns NaN, every comparison is
+    // false, and the domain saturates to 200 — flattening every tile to grey.
+    expect(niceDomain([0.4, NaN, -0.2])).toBe(0.5);
+    expect(niceDomain([1.5, Infinity])).toBe(2);
+  });
+
+  it("falls back to the smallest domain when there is no usable data", () => {
+    expect(niceDomain([])).toBe(0.5);
+    expect(niceDomain([NaN, NaN])).toBe(0.5);
+  });
+
+  it("exposes the nice ladder for the legend to label", () => {
+    expect(NICE_DOMAINS[0]).toBe(0.5);
+    expect(NICE_DOMAINS[NICE_DOMAINS.length - 1]).toBe(200);
   });
 });
