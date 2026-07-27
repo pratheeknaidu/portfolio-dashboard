@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { ToastStack } from "@/components/ToastStack";
+import { PreferencesProvider } from "@/lib/preferences-context";
 
 // One proportional sans for prose, one tabular mono for every number. That
 // pairing rule is the spec; the specific families are replaceable.
@@ -47,10 +48,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     >
       <body className="min-h-screen overflow-x-hidden">
         <AuthProvider>
-          <ToastProvider>
-            {children}
-            <ToastStack />
-          </ToastProvider>
+          <PreferencesProvider>
+            <ToastProvider>
+              {children}
+              <ToastStack />
+            </ToastProvider>
+          </PreferencesProvider>
         </AuthProvider>
       </body>
     </html>
