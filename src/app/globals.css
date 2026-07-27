@@ -32,6 +32,58 @@
     --ring: oklch(0.55 0.13 162);
   }
 
+  /* ---------------------------------------------------------------
+     Redesign tokens (design handoff, 2026-07-26).
+     Added alongside the legacy oklch palette above, NOT replacing it:
+     globals.css is global, so a destructive swap would break every
+     screen the moment the first one migrates. Screens opt in as they
+     are rewritten; the legacy block is deleted in redesign plan 4.
+     --------------------------------------------------------------- */
+  :root {
+    --rd-page: #07090b;
+    --rd-chrome: #0b0e12;
+    --rd-card: #0f1318;
+    --rd-inset: #0a0d11;
+    --rd-control: #12161c;
+    --rd-row-header: #0c1014;
+    --rd-row-hover: #12181e;
+
+    --rd-border-hairline: #151b21;
+    --rd-border: #1c222a;
+    --rd-border-control: #1e242c;
+    --rd-border-strong: #242b34;
+    --rd-border-stronger: #2a323c;
+    --rd-gridline: #141d18;
+
+    --rd-text: #e9edf1;
+    --rd-text-secondary: #d3dbe3;
+    --rd-text-body: #b7c1cb;
+    --rd-text-muted: #97a4b1;
+    --rd-text-label: #7b8895;
+    --rd-text-dim: #6b7885;
+    --rd-text-faint: #55616e;
+    --rd-text-disabled: #3a434e;
+
+    --rd-gain: #4ade9b;
+    --rd-loss: #e2707f;
+    --rd-flat: #8fa0ae;
+    --rd-flat-tile: #5c626a;
+    --rd-flat-aggregate: #2e343c;
+    --rd-warning: #d9a441;
+    --rd-error: #e0913e;
+
+    --rd-focus: #4ade9b;
+  }
+
+  /* The colourblind preference re-points the two semantic colours at the
+     document root, so every P&L figure in the app flips with no React
+     re-render and no prop drilling. Only the treemap needs the preference
+     in JS, because interpolating a ramp is not something CSS can do. */
+  :root[data-cvd="true"] {
+    --rd-gain: #5eb2e0;
+    --rd-loss: #e0913e;
+  }
+
   html,
   body {
     color: var(--foreground);
@@ -143,5 +195,11 @@
       color-mix(in oklab, var(--primary) 18%, transparent),
       transparent 72%
     );
+  }
+
+  /* There is currently no visible focus anywhere in the product. */
+  .rd-focusable:focus-visible {
+    outline: 2px solid var(--rd-focus);
+    outline-offset: 2px;
   }
 }

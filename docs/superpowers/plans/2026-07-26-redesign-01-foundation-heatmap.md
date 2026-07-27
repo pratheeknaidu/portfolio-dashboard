@@ -990,10 +990,15 @@ const monoFont = JetBrains_Mono({
 });
 ```
 
-`--font-display` still has consumers on the not-yet-migrated screens, so point it at the same family rather than deleting it:
+`--font-display` still has ~14 consumers on the not-yet-migrated screens, so point it at the same family rather than deleting it. It needs its **own loader call** — `bodyFont.variable` is the literal string `"--font-body"`, so `const displayFont = bodyFont` would emit that class twice, leave `--font-display` undefined, and silently drop every heading in the app to `system-ui`:
 
 ```ts
-const displayFont = bodyFont;
+const displayFont = Instrument_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
 ```
 
 Leave the `<html className={...}>` line as it is — it already interpolates all three variables.
