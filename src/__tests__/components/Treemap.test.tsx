@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { Treemap } from "@/components/Treemap";
+import { Treemap, domainFor } from "@/components/Treemap";
+import { PreferencesProvider } from "@/lib/preferences-context";
 import type { PortfolioItem } from "@/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,15 +36,36 @@ const mockItems: PortfolioItem[] = [
   },
 ];
 
+// jsdom doesn't implement matchMedia; stub it so useIsMobile doesn't throw.
+// Default: desktop (matches = false).
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: jest.fn().mockReturnValue({
+      matches: false,
+      media: "",
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }),
+  });
+});
+
+const renderTreemap = (props: Partial<React.ComponentProps<typeof Treemap>> = {}) =>
+  render(
+    <PreferencesProvider>
+      <Treemap items={mockItems} sizing="equity" domain={1} onSelect={jest.fn()} {...props} />
+    </PreferencesProvider>,
+  );
+
 describe("Treemap", () => {
   it("renders a tile for each portfolio item", () => {
-    render(<Treemap items={mockItems} sizing="equity" onSelect={jest.fn()} />);
+    renderTreemap();
     expect(screen.getByTestId("tile-AAPL")).toBeInTheDocument();
     expect(screen.getByTestId("tile-MSFT")).toBeInTheDocument();
   });
 
   it("passes market value as tile size", () => {
-    render(<Treemap items={mockItems} sizing="equity" onSelect={jest.fn()} />);
+    renderTreemap();
     const treemap = screen.getByTestId("treemap");
     expect(treemap).toBeInTheDocument();
   });
@@ -54,10 +76,16 @@ describe("Treemap", () => {
     // (Lifetime totalPL is AAPL 2135 vs MSFT 285 — a totally different order
     //  of magnitude. If we regressed back to totalPL the values below would
     //  fail loudly.)
-    render(<Treemap items={mockItems} sizing="profit" onSelect={jest.fn()} />);
+    renderTreemap({ sizing: "profit" });
     const aapl = Number(screen.getByTestId("tile-AAPL").getAttribute("data-value"));
     const msft = Number(screen.getByTestId("tile-MSFT").getAttribute("data-value"));
     expect(aapl).toBeCloseTo(115, 5);
     expect(msft).toBeCloseTo(105, 5);
+  });
+
+  it("derives a domain that covers the largest absolute move", () => {
+    expect(domainFor(mockItems)).toBeGreaterThanOrEqual(
+      Math.max(...mockItems.map((i) => Math.abs(i.quote.changePercent))),
+    );
   });
 });
