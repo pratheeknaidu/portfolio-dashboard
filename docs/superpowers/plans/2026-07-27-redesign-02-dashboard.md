@@ -57,9 +57,11 @@ Nothing above is dropped — each is listed in plan 3's inbox at the bottom of t
 
 **Modify:** `src/components/MoversCard.tsx` (rewrite), `src/components/EmptyPortfolio.tsx` (rewrite), `src/lib/use-portfolio-data.ts` (snapshots), `src/lib/yahoo-finance.ts`, `src/app/api/quotes/route.ts`, `src/app/page.tsx`, `src/types/index.ts`.
 
-**Delete:** `src/components/MobileMenu.tsx`, `src/components/MetricCard.tsx`, `src/components/PortfolioHeroCard.tsx`, `src/components/AllocationCard.tsx`, `src/components/FailedTickersChip.tsx`, `src/components/Navbar.tsx`.
+**Delete:** `src/components/MetricCard.tsx`, `src/components/PortfolioHeroCard.tsx`, `src/components/AllocationCard.tsx`, `src/components/FailedTickersChip.tsx`.
 
-All six are dashboard-only — verified with `grep -rl` — so nothing on Analytics moves.
+These four are dashboard-only — verified with `grep -rl` — so nothing on Analytics moves.
+
+**Not deleted here — correction to the original plan:** `Navbar.tsx` and `MobileMenu.tsx` are NOT dashboard-only. `src/app/analytics/page.tsx` also renders `Navbar`, and `MobileMenu` has its own unit test. Analytics is not rewritten until plan 3, so both survive plan 2 and coexist with the new `AppShell`/`TopBar` — exactly the additive coexistence the new CSS tokens use against the legacy palette. They move to the **plan 3 inbox** for deletion once analytics stops rendering `Navbar`. Consequence: there is no deliberately-red phase in this plan; the suite stays green throughout.
 
 ---
 
@@ -1193,7 +1195,8 @@ The hamburger goes. The two things `MobileMenu` currently carries — **Sign out
 **Files:**
 - Create: `src/components/AppShell.tsx`, `src/components/TopBar.tsx`, `src/components/MobileTabs.tsx`
 - Test: `src/__tests__/components/TopBar.test.tsx`, `src/__tests__/components/MobileTabs.test.tsx`
-- Delete: `src/components/MobileMenu.tsx`, `src/components/Navbar.tsx`
+
+**Additive only.** The original plan deleted `Navbar.tsx`/`MobileMenu.tsx` here and accepted a red suite until Task 15. That was wrong: `analytics/page.tsx` also imports `Navbar`, and `MobileMenu` has its own test — deleting either breaks files unrelated to the dashboard, and analytics is not rewritten until plan 3. So this task only ADDS the three new components; the legacy chrome stays until plan 3. The suite stays green.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1510,16 +1513,12 @@ export function AppShell({ topBar, children }: AppShellProps) {
 
 - [ ] **Step 6: Delete the replaced chrome**
 
-```bash
-git rm src/components/MobileMenu.tsx src/components/Navbar.tsx
-```
+**Do NOT delete `Navbar.tsx` or `MobileMenu.tsx`.** They are shared with `analytics/page.tsx` (still using `Navbar`) and `MobileMenu` has its own test. They leave in plan 3. Nothing is deleted in this task.
 
-`src/app/page.tsx` still imports `Navbar` at this point and will not compile. That is expected — Task 15 rewires it. Do not patch the page here.
-
-- [ ] **Step 7: Run the two new suites**
+- [ ] **Step 7: Run the two new suites, then the whole suite**
 
 Run: `npm test -- src/__tests__/components/MobileTabs.test.tsx src/__tests__/components/TopBar.test.tsx`
-Expected: PASS, 10 tests. `npm test` as a whole is RED until Task 15 — that is expected, not damage.
+Expected: PASS, 10 tests. Then run the whole `npm test` — it stays GREEN, since this task is purely additive. `npm run lint` and `npx tsc --noEmit` must both be clean.
 
 - [ ] **Step 8: Commit**
 
@@ -1527,11 +1526,13 @@ Expected: PASS, 10 tests. `npm test` as a whole is RED until Task 15 — that is
 git add src/components/AppShell.tsx src/components/TopBar.tsx src/components/MobileTabs.tsx src/__tests__/components/TopBar.test.tsx src/__tests__/components/MobileTabs.test.tsx
 git commit -m "feat(chrome): app shell with tab navigation, no hamburger
 
-Replaces Navbar and MobileMenu. Sign out and Sign in were only reachable
-through the hamburger; they move into the top bar as real 44px controls
-rather than the ~20px text link the review flagged.
+Adds AppShell, TopBar and a full-width MobileTabs control to replace the
+hamburger. Sign out and Sign in move into the top bar as real 44px
+controls rather than the ~20px text link the review flagged.
 
-The page does not compile until the dashboard is rewired."
+Additive only: the legacy Navbar and MobileMenu stay in place for the
+analytics screen, which is not migrated yet, and are removed once its
+last consumer is gone — the same coexistence the new CSS tokens use."
 ```
 
 ---
@@ -2666,7 +2667,7 @@ Replace the `return (...)` block of `src/app/page.tsx`. Keep every existing hook
 
 - [ ] **Step 2: Fix the imports**
 
-Remove: `Navbar`, `PortfolioHeroCard`, `MetricCard`, `AllocationCard`, `FailedTickersChip`, and the local `fmtCurrency` / `fmtCurrencySigned` helpers if now unused.
+Remove from `page.tsx`'s imports: `Navbar`, `PortfolioHeroCard`, `MetricCard`, `AllocationCard`, `FailedTickersChip`, and the local `fmtCurrency` / `fmtCurrencySigned` helpers if now unused. Note `Navbar` is only being removed from THIS page's imports — the file itself stays (analytics still uses it); do not `git rm` it here.
 
 Add:
 
@@ -2733,7 +2734,7 @@ Confirm `DELETE /api/portfolio/[ticker]` exists before wiring — it is listed i
 - [ ] **Step 4: Verify the build and the whole suite**
 
 Run: `npm run build && npm test && npm run lint && npx tsc --noEmit`
-Expected: build succeeds; **all** suites pass — this is the commit where the tree goes green again after Task 8 broke it.
+Expected: build succeeds; **all** suites pass. (The tree has been green since Task 8 — this commit does not "recover" it; it swaps the dashboard's chrome and cards over in one token-migration commit.)
 
 - [ ] **Step 5: Commit**
 
@@ -2815,7 +2816,7 @@ MetricCard and PortfolioHeroCard have no remaining importers."
 
 ## Watch out for
 
-- **The tree is deliberately RED between Tasks 8 and 15.** Task 8 deletes `Navbar` while `page.tsx` still imports it. Do not patch the page early to go green; that splits the token migration across commits, which is the one thing the spec forbids.
+- **The tree stays GREEN throughout** (corrected from the original plan, which deleted `Navbar` in Task 8 and accepted a red suite). `Navbar` is shared with analytics, so it is not deleted in this plan at all — Task 8 is additive and Task 15 only stops the dashboard from importing it. The token-migration-in-one-commit rule still holds: Task 15 swaps the dashboard's whole render tree over at once.
 - **Task 4 is a breaking API change.** Three test files move with it. Fix expectations to match what each mock actually throws rather than loosening assertions.
 - `MobileTabs` must stay prefix-aware. Without it every tab under `/demo` renders inactive and the control looks broken.
 - `NAV_TABS` deliberately omits Holdings. Plan 3 appends it.
@@ -2836,3 +2837,4 @@ Carried forward deliberately, so nothing is lost between plans:
 4. Mobile heat map: top 10 positions only, remainder as a tappable aggregate strip routing to Holdings.
 5. `PositionSheet` as the single position entry point, absorbing `ChipDetail` and gaining Edit/Remove.
 6. Append `{ href: "/holdings", label: "Holdings" }` to `NAV_TABS` — the third tab the spec's mobile section calls for.
+7. Migrate `analytics/page.tsx` onto `AppShell`/`TopBar`, then delete `Navbar.tsx`, `MobileMenu.tsx`, and `MobileMenu.test.tsx` — deferred out of plan 2 because analytics still renders `Navbar`. (Discovered during plan 2 Task 8: `Navbar` was wrongly assumed dashboard-only.)
