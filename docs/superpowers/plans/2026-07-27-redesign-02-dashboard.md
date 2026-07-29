@@ -1909,7 +1909,8 @@ The donut goes: it needs a legend, the legend needs colours, and the colours col
 **Files:**
 - Create: `src/components/AllocationStrip.tsx`
 - Test: `src/__tests__/components/AllocationStrip.test.tsx`
-- Delete: `src/components/AllocationCard.tsx`
+
+**Additive only** (corrected). The original plan deleted `AllocationCard.tsx` here, but `page.tsx` still imports it until Task 15, so deleting now breaks compile for no benefit. `AllocationCard` is `page.tsx`-only with no own test; its deletion is deferred to Task 16, keeping the tree green. Same reasoning as the Task 8 `Navbar` correction.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2066,16 +2067,14 @@ export function AllocationStrip({ items }: AllocationStripProps) {
 }
 ```
 
-- [ ] **Step 4: Delete the donut**
+- [ ] **Step 4: Do NOT delete `AllocationCard.tsx`**
 
-```bash
-git rm src/components/AllocationCard.tsx
-```
+It stays until Task 16 — `page.tsx` still imports it until Task 15. This task is additive.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `npm test -- src/__tests__/components/AllocationStrip.test.tsx`
-Expected: PASS, 6 tests.
+Expected: PASS, 6 tests. The whole suite stays green.
 
 - [ ] **Step 6: Commit**
 
@@ -2098,7 +2097,8 @@ A slim inline amber bar **above a working map** — never a page takeover. Amber
 **Files:**
 - Create: `src/components/FailedTickersStrip.tsx`
 - Test: `src/__tests__/components/FailedTickersStrip.test.tsx`
-- Delete: `src/components/FailedTickersChip.tsx`
+
+**Additive only** (corrected): `FailedTickersChip.tsx` is `page.tsx`-only and stays until Task 16, same as `AllocationCard` — deleting now breaks compile for no benefit.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2269,16 +2269,14 @@ export function FailedTickersStrip({
 }
 ```
 
-- [ ] **Step 4: Delete the old chip**
+- [ ] **Step 4: Do NOT delete `FailedTickersChip.tsx`**
 
-```bash
-git rm src/components/FailedTickersChip.tsx
-```
+It stays until Task 16 — `page.tsx` still imports it until Task 15. Additive only.
 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `npm test -- src/__tests__/components/FailedTickersStrip.test.tsx`
-Expected: PASS, 7 tests.
+Expected: PASS, 7 tests. Whole suite stays green.
 
 - [ ] **Step 6: Commit**
 
@@ -2755,17 +2753,19 @@ Loading now renders a skeleton instead of a zeroed portfolio."
 ## Task 16: Delete the replaced components and verify
 
 **Files:**
-- Delete: `src/components/MetricCard.tsx`, `src/components/PortfolioHeroCard.tsx`
+- Delete: `src/components/MetricCard.tsx`, `src/components/PortfolioHeroCard.tsx`, `src/components/AllocationCard.tsx`, `src/components/FailedTickersChip.tsx`
+
+All four are replaced by the new dashboard and were deliberately left in place through Tasks 11–15 so the tree stayed green until `page.tsx` stopped importing them (Task 15).
 
 - [ ] **Step 1: Confirm nothing still imports them**
 
-Run: `grep -rl "MetricCard\|PortfolioHeroCard" src/`
-Expected: no output. If anything matches, fix that import first — do not delete a file another module still references.
+Run: `grep -rl "MetricCard\|PortfolioHeroCard\|AllocationCard\|FailedTickersChip" src/`
+Expected: no output (Task 15 removed the last imports from `page.tsx`). If anything matches, fix that import first — do not delete a file another module still references. In particular confirm `AllocationCard`/`FailedTickersChip` are not imported by `analytics/page.tsx`.
 
 - [ ] **Step 2: Delete**
 
 ```bash
-git rm src/components/MetricCard.tsx src/components/PortfolioHeroCard.tsx
+git rm src/components/MetricCard.tsx src/components/PortfolioHeroCard.tsx src/components/AllocationCard.tsx src/components/FailedTickersChip.tsx
 ```
 
 - [ ] **Step 3: Full verification**
@@ -2798,7 +2798,8 @@ Then, against `http://localhost:3000/demo` — and `/demo/analytics` to confirm 
 git add -A
 git commit -m "chore: delete the components the dashboard redesign replaced
 
-MetricCard and PortfolioHeroCard have no remaining importers."
+MetricCard, PortfolioHeroCard, AllocationCard and FailedTickersChip have
+no remaining importers once the dashboard is rewired."
 ```
 
 ---
