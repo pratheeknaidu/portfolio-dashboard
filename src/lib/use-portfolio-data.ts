@@ -5,7 +5,7 @@ import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
 import { buildDemoItems } from "@/lib/demo-data";
 import { isMarketOpen } from "@/lib/market-hours";
-import type { Holding, PortfolioItem, Quote, TimeRange } from "@/types";
+import type { Holding, PortfolioItem, Quote, QuoteFailure, TimeRange } from "@/types";
 
 /**
  * `loading` is distinct from `empty` on purpose. The shipped app renders
@@ -17,14 +17,14 @@ export type PortfolioStatus = "loading" | "ready" | "empty" | "error";
 
 export interface PortfolioData {
   items: PortfolioItem[];
-  failed: string[];
+  failed: QuoteFailure[];
   status: PortfolioStatus;
   refresh: () => Promise<void>;
 }
 
 interface QuotesResponse {
   quotes: Record<string, Quote>;
-  failed: string[];
+  failed: QuoteFailure[];
 }
 
 export function usePortfolioData(range: TimeRange): PortfolioData {
@@ -32,7 +32,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
   const toast = useToast();
   const isDemo = useIsDemo();
   const [items, setItems] = useState<PortfolioItem[]>([]);
-  const [failed, setFailed] = useState<string[]>([]);
+  const [failed, setFailed] = useState<QuoteFailure[]>([]);
   const [status, setStatus] = useState<PortfolioStatus>("loading");
 
   const refresh = useCallback(async () => {

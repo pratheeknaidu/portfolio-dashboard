@@ -16,7 +16,7 @@ import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AnalystSentimentCard } from "@/components/AnalystSentimentCard";
 import { ValuationCard } from "@/components/ValuationCard";
-import type { Holding, Quote, PortfolioItem, Snapshot, ValuationData } from "@/types";
+import type { Holding, Quote, QuoteFailure, PortfolioItem, Snapshot, ValuationData } from "@/types";
 
 export default function AnalyticsPage() {
   const { getIdToken } = useAuth();
@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
         if (!quotesRes.ok) {
           toast.error("Quotes service is unavailable.");
         } else {
-          const { quotes }: { quotes: Record<string, Quote>; failed: string[] } = await quotesRes.json();
+          const { quotes }: { quotes: Record<string, Quote>; failed: QuoteFailure[] } = await quotesRes.json();
           setItems(
             holdings.filter((h) => quotes[h.ticker]).map((h) => {
               const q = quotes[h.ticker];

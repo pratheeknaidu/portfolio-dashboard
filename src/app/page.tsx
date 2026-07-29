@@ -205,7 +205,10 @@ export default function DashboardPage() {
                 selectedRect={tileRect}
                 onDismiss={dismissSelection}
               >
-                <FailedTickersChip tickers={failedTickers} onRetry={fetchPortfolio} />
+                <FailedTickersChip
+                  tickers={failedTickers.map((f) => f.ticker)}
+                  onRetry={fetchPortfolio}
+                />
               </HeatMapCard>
             </div>
           )}

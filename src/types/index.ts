@@ -1,3 +1,5 @@
+export type { FailureReason, QuoteFailure } from "@/lib/quote-failures";
+
 export interface Holding {
   ticker: string;
   companyName: string;

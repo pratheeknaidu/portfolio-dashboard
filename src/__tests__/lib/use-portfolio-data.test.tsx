@@ -116,7 +116,7 @@ describe("usePortfolioData status", () => {
   it("reports empty when every holding is missing a quote", async () => {
     stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: {}, failed: ["AAPL"] } },
+      quotes: { body: { quotes: {}, failed: [{ ticker: "AAPL", reason: "no_price" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("empty"));
@@ -189,7 +189,7 @@ describe("usePortfolioData merging", () => {
   it("drops holdings with no quote rather than rendering them at zero", async () => {
     stubFetch({
       holdings: { body: [holding(), holding({ ticker: "MSFT" })] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["MSFT"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "MSFT", reason: "no_price" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -199,11 +199,11 @@ describe("usePortfolioData merging", () => {
   it("surfaces the failed tickers for the retry strip", async () => {
     stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["ZZZZ"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "ZZZZ", reason: "unlisted" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.failed).toEqual(["ZZZZ"]);
+    expect(result.current.failed).toEqual([{ ticker: "ZZZZ", reason: "unlisted" }]);
   });
 
   it("tolerates a quotes payload with no failed array", async () => {
@@ -379,7 +379,7 @@ describe("usePortfolioData refresh", () => {
   it("re-fetches on demand, which is what the failed-ticker Retry calls", async () => {
     const fetchMock = stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["ZZZZ"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "ZZZZ", reason: "unlisted" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));

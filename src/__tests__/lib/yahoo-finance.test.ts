@@ -64,7 +64,9 @@ describe("getQuotes", () => {
     const result = await getQuotes(["AAPL", "BOGUS"], "1D");
     expect(result.quotes.AAPL).toBeDefined();
     expect(result.quotes.BOGUS).toBeUndefined();
-    expect(result.failed).toEqual(["BOGUS"]);
+    // Both candidates ("BOGUS" and "BOGUS-USD") reject with "not found",
+    // which classifyFailure reads as unlisted.
+    expect(result.failed).toEqual([{ ticker: "BOGUS", reason: "unlisted" }]);
   });
 
   it("returns cached data within TTL", async () => {
@@ -120,7 +122,9 @@ describe("getQuotes", () => {
     expect(result.quotes.AAPL).toBeDefined();
     expect(result.quotes.MSFT).toBeDefined();
     expect(result.quotes.BAD).toBeUndefined();
-    expect(result.failed).toEqual(["BAD"]);
+    // Both candidates reject with "Invalid", which doesn't match the
+    // unlisted/timeout keywords, so classifyFailure falls back to no_price.
+    expect(result.failed).toEqual([{ ticker: "BAD", reason: "no_price" }]);
   });
 
   it("resolves a bare crypto symbol via the -USD pair, keyed under the requested ticker", async () => {
@@ -147,6 +151,34 @@ describe("getQuotes", () => {
       previousClose: 22.0,
     });
     expect(result.failed).toEqual([]);
+  });
+
+  it("never reports a ticker as failed when a later candidate symbol resolves it", async () => {
+    // The first candidate ("ETC") throws, which records a failure reason for
+    // "ETC" — but the second candidate ("ETC-USD") then resolves it. The
+    // invariant under test: a ticker that ultimately gets a quote must never
+    // also show up in `failed`, even though a reason was recorded for it
+    // along the way.
+    mockQuote.mockImplementation((symbol: string) => {
+      if (symbol === "ETC") {
+        return Promise.reject(new Error("Quote not found for symbol: ETC"));
+      }
+      if (symbol === "ETC-USD") {
+        return Promise.resolve({
+          symbol: "ETC-USD",
+          regularMarketPrice: 22.5,
+          regularMarketChange: 0.5,
+          regularMarketChangePercent: 2.27,
+          regularMarketPreviousClose: 22.0,
+        });
+      }
+      return Promise.reject(new Error(`No quote for ${symbol}`));
+    });
+
+    const result = await getQuotes(["ETC"], "1D");
+    expect(result.quotes.ETC).toBeDefined();
+    expect(result.failed).toEqual([]);
+    expect(result.failed.some((f) => f.ticker === "ETC")).toBe(false);
   });
 
   it("prefers the bare-symbol equity quote and does not query the -USD pair when it succeeds", async () => {
@@ -200,7 +232,7 @@ describe("getQuotes", () => {
 
     const result = await getQuotes(["NOTACOIN"], "1D");
     expect(result.quotes.NOTACOIN).toBeUndefined();
-    expect(result.failed).toEqual(["NOTACOIN"]);
+    expect(result.failed).toEqual([{ ticker: "NOTACOIN", reason: "unlisted" }]);
     expect(mockQuote).toHaveBeenCalledWith("NOTACOIN");
     expect(mockQuote).toHaveBeenCalledWith("NOTACOIN-USD");
   });
