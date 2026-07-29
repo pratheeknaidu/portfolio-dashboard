@@ -61,7 +61,7 @@ const quote = (over: Partial<Quote> = {}): Quote => ({
 function stubFetch(routes: {
   holdings?: { ok?: boolean; status?: number; body?: unknown };
   quotes?: { ok?: boolean; body?: unknown };
-  snapshots?: { ok?: boolean; body?: unknown };
+  snapshots?: { ok?: boolean; body?: unknown; throws?: boolean };
   throws?: boolean;
 }) {
   const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
@@ -76,6 +76,7 @@ function stubFetch(routes: {
     }
     if (url.startsWith("/api/snapshot") && (!init || init.method !== "POST")) {
       const r = routes.snapshots ?? { ok: true, body: [] };
+      if (r.throws) throw new Error("offline");
       return { ok: r.ok ?? true, status: 200, json: async () => r.body };
     }
     if (url.startsWith("/api/quotes")) {
@@ -427,6 +428,22 @@ describe("usePortfolioData snapshots", () => {
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.snapshots).toEqual([]);
+  });
+
+  // Distinct from the case above: that one covers a non-ok *response*, this
+  // one covers the history fetch *throwing* (e.g. offline/DNS failure). Both
+  // must be swallowed by the inner try/catch — a decorative history read
+  // must not be able to turn a working portfolio into an error screen.
+  it("keeps the portfolio ready and does not toast when the history read throws", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { throws: true },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([]);
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it("serves the fixture history in demo mode with no network", async () => {
