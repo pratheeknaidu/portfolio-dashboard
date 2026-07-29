@@ -70,6 +70,8 @@
     --rd-flat-tile: #5c626a;
     --rd-flat-aggregate: #2e343c;
     --rd-warning: #d9a441;
+    --rd-warning-surface: #d9a4411a;
+    --rd-warning-border: #d9a4414d;
     --rd-error: #e0913e;
 
     --rd-focus: #4ade9b;
