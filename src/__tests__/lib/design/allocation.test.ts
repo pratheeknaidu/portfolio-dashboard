@@ -82,6 +82,30 @@ describe("sectorAllocation", () => {
     expect(slices.find((s) => s.sector === "Other")?.value).toBe(40);
   });
 
+  // An empty-string sector takes the Other branch on the `i.sector &&` check
+  // alone, so it never exercises the SECTOR_COLORS membership lookup. A
+  // non-empty but unrecognised sector (stale imported data, a sector Yahoo
+  // used to return and no longer does) must fold into Other too, rather than
+  // forming its own one-off bucket.
+  it("buckets a non-empty but unrecognised sector as Other rather than its own bucket", () => {
+    const slices = sectorAllocation([item("Technology", 60), item("Conglomerates", 40)]);
+    expect(slices.find((s) => s.sector === "Other")?.value).toBe(40);
+  });
+
+  // Basic Materials now has its own palette entry (fix above), so it must get
+  // its own slice instead of folding into Other the way it used to.
+  it("gives Basic Materials its own slice now that the palette covers it", () => {
+    const slices = sectorAllocation([item("Technology", 60), item("Basic Materials", 40)]);
+    expect(slices.find((s) => s.sector === "Basic Materials")).toEqual(
+      expect.objectContaining({
+        sector: "Basic Materials",
+        value: 40,
+        color: sectorColor("Basic Materials"),
+      }),
+    );
+    expect(slices.find((s) => s.sector === "Other")).toBeUndefined();
+  });
+
   it("returns an empty list for an empty portfolio", () => {
     expect(sectorAllocation([])).toEqual([]);
   });
