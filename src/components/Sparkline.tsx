@@ -16,7 +16,14 @@ const MIN_POINTS = 5;
  * measured trend.
  */
 export function Sparkline({ values, width = 320, height = 44 }: SparklineProps) {
-  if (values.length < MIN_POINTS) {
+  // Drop non-finite points before counting: min/max over a NaN poison every y
+  // into a literal "NaN" in the path, which React renders silently. Filtering
+  // first also means a mostly-bad series correctly falls back to the note
+  // rather than drawing a broken line, matching how the design lib's other
+  // pure helpers treat bad quotes.
+  const finite = values.filter((v) => Number.isFinite(v));
+
+  if (finite.length < MIN_POINTS) {
     return (
       <p className="font-mono text-[11px] text-rd-faint">
         Not enough history yet — a few more days and a trend appears here.
@@ -24,13 +31,13 @@ export function Sparkline({ values, width = 320, height = 44 }: SparklineProps) 
     );
   }
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = Math.min(...finite);
+  const max = Math.max(...finite);
   // A flat series has zero range; dividing by it puts NaN into every y.
   const range = max - min || 1;
-  const stepX = width / (values.length - 1);
+  const stepX = width / (finite.length - 1);
 
-  const d = values
+  const d = finite
     .map((v, i) => {
       const x = i * stepX;
       const y = height - ((v - min) / range) * height;
@@ -38,7 +45,7 @@ export function Sparkline({ values, width = 320, height = 44 }: SparklineProps) 
     })
     .join(" ");
 
-  const rising = values[values.length - 1] >= values[0];
+  const rising = finite[finite.length - 1] >= finite[0];
 
   return (
     <svg

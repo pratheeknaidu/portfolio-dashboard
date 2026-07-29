@@ -59,4 +59,21 @@ describe("Sparkline", () => {
     const { container } = render(<Sparkline values={series} />);
     expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
+
+  // A single NaN in the series poisons min/max and turns every y into a literal
+  // "NaN" in the path, which React renders silently — the exact failure the
+  // range guard claims to prevent but did not, since it only covered flat data.
+  it("drops a non-finite point instead of emitting NaN across the whole path", () => {
+    const { container } = render(<Sparkline values={[100, 105, NaN, 110, 108, 115]} />);
+    const d = container.querySelector("path")!.getAttribute("d")!;
+    expect(d).not.toContain("NaN");
+    // Five finite points remain, so it still draws rather than falling back.
+    expect(container.querySelector("path")).toBeInTheDocument();
+  });
+
+  it("falls back to the note when too few points survive the finite filter", () => {
+    const { container } = render(<Sparkline values={[100, NaN, Infinity, 105, -Infinity]} />);
+    expect(container.querySelector("path")).toBeNull();
+    expect(screen.getByText(/not enough history/i)).toBeInTheDocument();
+  });
 });
