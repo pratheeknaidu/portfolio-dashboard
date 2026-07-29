@@ -58,9 +58,10 @@ export function TopBar({ onImportClick, onAddClick, onSignOut, isDemo, marketOpe
             Import
           </button>
 
-          {/* MobileMenu carried these; it is deleted, so they live here at a
-              real touch target rather than as the ~20px text link the review
-              flagged as the only way out of the app. */}
+          {/* MobileMenu carries these today; they move here permanently once
+              it is retired in a later plan, giving them a real touch target
+              now rather than the ~20px text link the review flagged as the
+              only way out of the app. */}
           {isDemo ? (
             <Link
               href="/"
