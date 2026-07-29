@@ -1,82 +1,62 @@
+import { topMovers } from "@/lib/design/movers";
+import { signedMoney, signedPct } from "@/lib/design/format";
 import type { PortfolioItem } from "@/types";
 
-function fmtPct(n: number): string {
-  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
-}
-
-function fmtCurrencySigned(n: number): string {
-  const formatted = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(Math.abs(n));
-  return n >= 0 ? `+${formatted}` : `−${formatted}`;
-}
-
-interface Props {
+interface MoversCardProps {
   items: PortfolioItem[];
   limit?: number;
 }
 
-export function MoversCard({ items, limit = 5 }: Props) {
-  const movers = [...items]
-    .sort(
-      (a, b) =>
-        Math.abs(b.quote.changePercent) - Math.abs(a.quote.changePercent),
-    )
-    .slice(0, limit);
+function glyph(v: number): string {
+  return v > 0 ? "▲" : "▼";
+}
+
+/**
+ * "What moved the number" — the companion to the day change in SummaryCard.
+ *
+ * Rows are ranked by dollar contribution, which is the only ranking that can
+ * explain the headline. The previous percent ranking put a $200 position that
+ * moved 9% above a $40,000 position that moved 1.2%, directly contradicting
+ * the figure it sat beside.
+ */
+export function MoversCard({ items, limit = 5 }: MoversCardProps) {
+  const movers = topMovers(items, limit);
 
   return (
-    <div className="bento-card p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-5">
-        <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Today&apos;s Movers
-        </span>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-          By abs % change
-        </span>
-      </div>
+    <section
+      aria-label="What moved the number"
+      className="flex h-full flex-col rounded-xl border border-rd-border bg-rd-card p-5 lg:p-6"
+    >
+      <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-rd-label">
+        What moved the number
+      </h2>
 
       {movers.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-          No movers yet
-        </div>
+        <p className="mt-4 text-sm text-rd-muted">Nothing moved today.</p>
       ) : (
-        <ul className="flex flex-col gap-1">
-          {movers.map((item) => {
-            const positive = item.quote.changePercent >= 0;
-            const dollarChange = item.quote.change * item.shares;
-            return (
-              <li
-                key={item.ticker}
-                className="flex items-center gap-3 py-2.5 px-2 -mx-2 rounded-lg hover:bg-surface-elevated/40 transition-colors"
+        <ul className="mt-4 flex flex-col gap-3">
+          {movers.map(({ item, contribution }) => (
+            <li
+              key={item.ticker}
+              data-testid="mover-row"
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span className="min-w-0">
+                <span className="font-mono text-sm font-semibold text-rd-text">{item.ticker}</span>
+                <span className="ml-2 truncate text-xs text-rd-muted">{item.companyName}</span>
+              </span>
+              <span
+                className={`shrink-0 font-mono text-sm tabular-nums ${
+                  contribution >= 0 ? "text-rd-gain" : "text-rd-loss"
+                }`}
               >
-                <div className="h-10 w-10 rounded-xl bg-surface-elevated flex items-center justify-center font-mono text-xs font-semibold text-foreground border border-border/30">
-                  {item.ticker.slice(0, 4)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-mono text-sm font-medium text-foreground truncate">
-                    {item.ticker}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {item.companyName || item.sector || "—"}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className={`font-mono text-sm font-semibold ${positive ? "text-positive" : "text-negative"}`}
-                  >
-                    {fmtPct(item.quote.changePercent)}
-                  </div>
-                  <div className="font-mono text-[11px] text-muted-foreground">
-                    {fmtCurrencySigned(dollarChange)}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+                <span aria-hidden="true">{glyph(contribution)}</span> {signedMoney(contribution)}
+                <span className="ml-2 text-rd-muted">{signedPct(item.quote.changePercent)}</span>
+              </span>
+            </li>
+          ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }
