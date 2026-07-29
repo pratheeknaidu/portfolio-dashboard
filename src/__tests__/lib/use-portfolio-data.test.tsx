@@ -34,6 +34,7 @@ const demoItem = { ticker: "DEMO" } as unknown as PortfolioItem;
 const mockBuildDemoItems = jest.fn((_range: TimeRange) => [demoItem]);
 jest.mock("@/lib/demo-data", () => ({
   buildDemoItems: (range: TimeRange) => mockBuildDemoItems(range),
+  DEMO_SNAPSHOTS: [{ date: "2026-07-01", totalValue: 1000, holdings: {} }],
 }));
 
 // --- fixtures ---------------------------------------------------------------
@@ -60,10 +61,10 @@ const quote = (over: Partial<Quote> = {}): Quote => ({
 function stubFetch(routes: {
   holdings?: { ok?: boolean; status?: number; body?: unknown };
   quotes?: { ok?: boolean; body?: unknown };
+  snapshots?: { ok?: boolean; body?: unknown };
   throws?: boolean;
 }) {
   const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
-    void init;
     if (routes.throws) throw new Error("offline");
     if (url.startsWith("/api/portfolio")) {
       const r = routes.holdings ?? { ok: true, body: [] };
@@ -72,6 +73,10 @@ function stubFetch(routes: {
         status: r.status ?? 200,
         json: async () => r.body,
       };
+    }
+    if (url.startsWith("/api/snapshot") && (!init || init.method !== "POST")) {
+      const r = routes.snapshots ?? { ok: true, body: [] };
+      return { ok: r.ok ?? true, status: 200, json: async () => r.body };
     }
     if (url.startsWith("/api/quotes")) {
       const r = routes.quotes ?? { ok: true, body: { quotes: {}, failed: [] } };
@@ -389,5 +394,49 @@ describe("usePortfolioData refresh", () => {
       await result.current.refresh();
     });
     expect(fetchMock.mock.calls.length).toBeGreaterThan(before);
+  });
+});
+
+// --- snapshot history ---------------------------------------------------
+
+describe("usePortfolioData snapshots", () => {
+  const history = [
+    { date: "2026-07-25", totalValue: 1000, holdings: { AAPL: 1000 } },
+    { date: "2026-07-26", totalValue: 1100, holdings: { AAPL: 1100 } },
+  ];
+
+  it("returns snapshot history for the sparkline", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { body: history },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual(history);
+  });
+
+  // A failed history read must not take down a working portfolio: the
+  // sparkline is decoration, the value above it is the point of the screen.
+  it("keeps the portfolio ready when only the history read fails", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { ok: false },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([]);
+  });
+
+  it("serves the fixture history in demo mode with no network", async () => {
+    const fetchMock = stubFetch({});
+    isDemo = true;
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([
+      { date: "2026-07-01", totalValue: 1000, holdings: {} },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

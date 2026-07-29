@@ -3,9 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
-import { buildDemoItems } from "@/lib/demo-data";
+import { buildDemoItems, DEMO_SNAPSHOTS } from "@/lib/demo-data";
 import { isMarketOpen } from "@/lib/market-hours";
-import type { Holding, PortfolioItem, Quote, QuoteFailure, TimeRange } from "@/types";
+import type { Holding, PortfolioItem, Quote, QuoteFailure, Snapshot, TimeRange } from "@/types";
 
 /**
  * `loading` is distinct from `empty` on purpose. The shipped app renders
@@ -19,6 +19,7 @@ export interface PortfolioData {
   items: PortfolioItem[];
   failed: QuoteFailure[];
   status: PortfolioStatus;
+  snapshots: Snapshot[];
   refresh: () => Promise<void>;
 }
 
@@ -34,6 +35,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
   const [items, setItems] = useState<PortfolioItem[]>([]);
   const [failed, setFailed] = useState<QuoteFailure[]>([]);
   const [status, setStatus] = useState<PortfolioStatus>("loading");
+  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
 
   const refresh = useCallback(async () => {
     // Demo mode is fully offline: render the static fixture and skip every
@@ -41,6 +43,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
     if (isDemo) {
       setItems(buildDemoItems(range));
       setFailed([]);
+      setSnapshots(DEMO_SNAPSHOTS);
       setStatus("ready");
       return;
     }
@@ -105,6 +108,16 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
         headers: { ...headers, "Content-Type": "application/json" },
         body: JSON.stringify({ totalValue, holdings: holdingsMap }),
       });
+
+      // Decoration, not the point of the screen — a failed history read must
+      // not fail the portfolio that renders above it. status is already
+      // "ready" by this point, so this can't delay first paint either.
+      try {
+        const historyRes = await fetch("/api/snapshot", { headers });
+        setSnapshots(historyRes.ok ? await historyRes.json() : []);
+      } catch {
+        setSnapshots([]);
+      }
     } catch (err) {
       console.error("usePortfolioData refresh failed:", err);
       toast.error("Network error — couldn't refresh portfolio.");
@@ -120,5 +133,5 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  return { items, failed, status, refresh };
+  return { items, failed, status, snapshots, refresh };
 }
