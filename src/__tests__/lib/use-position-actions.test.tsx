@@ -92,4 +92,34 @@ describe("usePositionActions", () => {
     act(() => result.current.dismiss());
     expect(result.current.selected).toBeNull();
   });
+
+  // The failed-tickers strip deletes a delisted symbol directly — it is never
+  // in `items`, so the confirm-based remove(item) could not reach it.
+  it("removeTicker deletes a bare ticker and refreshes, with no confirm", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const refresh = jest.fn();
+    const { result } = renderHook(() => usePositionActions(refresh));
+    await act(async () => {
+      await result.current.removeTicker("ZZZZ");
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/portfolio/ZZZZ",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(refresh).toHaveBeenCalled();
+    expect(result.current.confirming).toBeNull();
+  });
+
+  it("removeTicker does not refresh when the delete fails", async () => {
+    const fetchMock = jest.fn(async () => ({ ok: false, status: 500, json: async () => ({}) }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const refresh = jest.fn();
+    const { result } = renderHook(() => usePositionActions(refresh));
+    await act(async () => {
+      await result.current.removeTicker("ZZZZ");
+    });
+    expect(mockToastError).toHaveBeenCalledWith("Couldn't remove ZZZZ.");
+    expect(refresh).not.toHaveBeenCalled();
+  });
 });

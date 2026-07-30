@@ -15,6 +15,12 @@ export interface PositionActions {
   remove: (item: PortfolioItem) => void;
   cancelRemove: () => void;
   confirmRemove: () => Promise<void>;
+  /**
+   * Direct delete by ticker, no confirm. For the failed-tickers strip, whose
+   * delisted symbols are never in `items` (so `remove(item)` can't reach them)
+   * and where clicking Remove is already the explicit decision to drop them.
+   */
+  removeTicker: (ticker: string) => Promise<void>;
 }
 
 /**
@@ -45,26 +51,44 @@ export function usePositionActions(refresh: () => void): PositionActions {
   }, []);
   const cancelRemove = useCallback(() => setConfirming(null), []);
 
+  // The one DELETE. Returns whether it succeeded so callers can decide what to
+  // clear; on failure it toasts and leaves the caller's UI (confirm/strip) up.
+  const deleteTicker = useCallback(
+    async (ticker: string): Promise<boolean> => {
+      const token = await getIdToken();
+      if (!token) return false;
+      try {
+        const res = await fetch(`/api/portfolio/${ticker}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          toast.error(`Couldn't remove ${ticker}.`);
+          return false;
+        }
+        return true;
+      } catch {
+        toast.error(`Couldn't remove ${ticker}.`);
+        return false;
+      }
+    },
+    [getIdToken, toast],
+  );
+
   const confirmRemove = useCallback(async () => {
     if (!confirming) return;
-    const ticker = confirming.ticker;
-    const token = await getIdToken();
-    if (!token) return;
-    try {
-      const res = await fetch(`/api/portfolio/${ticker}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        toast.error(`Couldn't remove ${ticker}.`);
-        return;
-      }
+    if (await deleteTicker(confirming.ticker)) {
       setConfirming(null);
       refresh();
-    } catch {
-      toast.error(`Couldn't remove ${ticker}.`);
     }
-  }, [confirming, getIdToken, toast, refresh]);
+  }, [confirming, deleteTicker, refresh]);
+
+  const removeTicker = useCallback(
+    async (ticker: string) => {
+      if (await deleteTicker(ticker)) refresh();
+    },
+    [deleteTicker, refresh],
+  );
 
   return {
     selected,
@@ -77,5 +101,6 @@ export function usePositionActions(refresh: () => void): PositionActions {
     remove,
     cancelRemove,
     confirmRemove,
+    removeTicker,
   };
 }
