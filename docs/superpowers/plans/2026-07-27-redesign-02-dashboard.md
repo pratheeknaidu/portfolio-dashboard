@@ -2578,11 +2578,12 @@ users a wiped-out portfolio. The skeleton renders no numbers at all."
 
 Replace the `return (...)` block of `src/app/page.tsx`. Keep every existing hook, handler and modal exactly as they are — only the tree below changes.
 
+> **DEFECT (found in execution, fixed in `435ba9b`):** the `excludedValue` computation below is **always 0** — `usePortfolioData` filters holdings without a quote out of `items`, so a failed ticker is never in `items` to sum. Computing it here is impossible. It was moved into `usePortfolioData` (which has the raw holdings and the failure list) and is now returned from the hook. Below, destructure `excludedValue` from `usePortfolioData` and delete this local computation.
+
 ```tsx
   const totals = portfolioTotals(items);
-  const excludedValue = items
-    .filter((i) => failedTickers.some((f) => f.ticker === i.ticker))
-    .reduce((sum, i) => sum + i.shares * i.avgCost, 0);
+  // excludedValue now comes from the usePortfolioData destructure — see the
+  // defect note above. Do NOT recompute it from `items` here.
 
   return (
     <AuthGuard>
