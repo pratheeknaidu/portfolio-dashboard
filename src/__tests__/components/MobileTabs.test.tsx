@@ -40,4 +40,20 @@ describe("MobileTabs", () => {
     render(<MobileTabs />);
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
+
+  it("includes a Holdings tab between Dashboard and Analytics", () => {
+    expect(NAV_TABS.map((t) => t.label)).toEqual(["Dashboard", "Holdings", "Analytics"]);
+  });
+
+  it("marks Holdings current on the /holdings route", () => {
+    mockPathname.mockReturnValue("/holdings");
+    render(<MobileTabs />);
+    expect(screen.getByRole("link", { name: "Holdings" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("resolves Holdings active under the /demo prefix", () => {
+    mockPathname.mockReturnValue("/demo/holdings");
+    render(<MobileTabs />);
+    expect(screen.getByRole("link", { name: "Holdings" })).toHaveAttribute("aria-current", "page");
+  });
 });
