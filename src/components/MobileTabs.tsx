@@ -15,6 +15,7 @@ export interface NavTab {
  */
 export const NAV_TABS: NavTab[] = [
   { href: "/", label: "Dashboard" },
+  { href: "/holdings", label: "Holdings" },
   { href: "/analytics", label: "Analytics" },
 ];
 

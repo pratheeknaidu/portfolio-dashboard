@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppShell } from "@/components/AppShell";
 import { TopBar } from "@/components/TopBar";
@@ -10,11 +11,18 @@ import { MoversCard } from "@/components/MoversCard";
 import { AllocationStrip } from "@/components/AllocationStrip";
 import { FailedTickersStrip } from "@/components/FailedTickersStrip";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { PositionsTable } from "@/components/PositionsTable";
+import { MobileHoldingsList } from "@/components/MobileHoldingsList";
+import { PositionSheet } from "@/components/PositionSheet";
+import { EditHoldingModal } from "@/components/EditHoldingModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { isMarketOpen } from "@/lib/market-hours";
 import { usePortfolioData } from "@/lib/use-portfolio-data";
+import { usePositionActions } from "@/lib/use-position-actions";
 import { portfolioTotals } from "@/lib/design/portfolio-totals";
 import { CsvImportModal } from "@/components/CsvImportModal";
 import { AddHoldingModal } from "@/components/AddHoldingModal";
@@ -79,28 +87,11 @@ export default function DashboardPage() {
     setShowAddHolding(true);
   }, [isDemo, toast]);
 
-  // Remove is the correct action for a delisted symbol, so it must actually
-  // delete rather than only hide the chip until the next poll re-adds it.
-  const handleRemoveTicker = useCallback(
-    async (ticker: string) => {
-      const token = await getIdToken();
-      if (!token) return;
-      try {
-        const res = await fetch(`/api/portfolio/${ticker}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          toast.error(`Couldn't remove ${ticker}.`);
-          return;
-        }
-        fetchPortfolio();
-      } catch {
-        toast.error(`Couldn't remove ${ticker}.`);
-      }
-    },
-    [getIdToken, toast, fetchPortfolio],
-  );
+  // The holdings table row → sheet → edit/remove flow, shared with /holdings so
+  // the two screens cannot drift. The failed-tickers strip uses its direct
+  // removeTicker (a delisted symbol is never in `items`).
+  const actions = usePositionActions(fetchPortfolio);
+  const isMobile = useIsMobile();
 
   // Dismiss the pinned tooltip on Escape OR any click outside a tile.
   // Tile onClick handlers call stopPropagation, so clicks that reach the
@@ -193,7 +184,7 @@ export default function DashboardPage() {
                 failures={failedTickers}
                 excludedValue={excludedValue}
                 onRetry={() => fetchPortfolio()}
-                onRemove={handleRemoveTicker}
+                onRemove={actions.removeTicker}
               />
               <HeatMapCard
                 items={items}
@@ -211,9 +202,67 @@ export default function DashboardPage() {
             <div className="mt-4">
               <AllocationStrip items={items} />
             </div>
+
+            <div className="mt-4 rounded-xl border border-rd-border bg-rd-card">
+              <div className="flex items-center justify-between px-4 pt-4">
+                <h2 className="font-mono text-[10px] uppercase tracking-[0.1em] text-rd-label">
+                  Holdings
+                </h2>
+                {items.length > 10 && (
+                  <Link
+                    href={isDemo ? "/demo/holdings" : "/holdings"}
+                    className="rd-focusable text-xs font-medium text-rd-muted hover:text-rd-text"
+                  >
+                    All holdings →
+                  </Link>
+                )}
+              </div>
+              {isMobile ? (
+                <div className="p-4">
+                  <MobileHoldingsList
+                    items={items}
+                    totalValue={totals.totalValue}
+                    variant="dashboard"
+                    onSelect={actions.select}
+                    demo={isDemo}
+                  />
+                </div>
+              ) : (
+                <PositionsTable
+                  items={[...items].sort((a, b) => b.marketValue - a.marketValue).slice(0, 10)}
+                  totalValue={totals.totalValue}
+                  onSelect={actions.select}
+                />
+              )}
+            </div>
           </>
         )}
       </AppShell>
+
+      <PositionSheet
+        item={actions.selected}
+        onClose={actions.dismiss}
+        onEdit={actions.edit}
+        onRemove={actions.remove}
+      />
+      {actions.editing && (
+        <EditHoldingModal
+          holding={actions.editing}
+          onClose={actions.closeEdit}
+          onSuccess={() => {
+            actions.closeEdit();
+            fetchPortfolio();
+          }}
+        />
+      )}
+      {actions.confirming && (
+        <ConfirmDialog
+          title={`Remove ${actions.confirming.ticker}?`}
+          message="This deletes the holding from your portfolio."
+          onConfirm={actions.confirmRemove}
+          onCancel={actions.cancelRemove}
+        />
+      )}
 
       {showImport && (
         <CsvImportModal
