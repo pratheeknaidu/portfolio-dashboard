@@ -41,9 +41,20 @@ describe("sortHoldings", () => {
   });
 
   it("sorts text columns case-insensitively", () => {
-    const lower = item({ ticker: "zeta", companyName: "zeta" });
-    const upper = item({ ticker: "Alpha", companyName: "Alpha" });
-    expect(sortHoldings([lower, upper], "ticker", "asc", 600).map((i) => i.ticker)).toEqual(["Alpha", "zeta"]);
+    // Data chosen to DISCRIMINATE case-folding from raw ASCII order: raw
+    // comparison sorts uppercase 'B' (66) before lowercase 'a' (97), giving
+    // ["boeing", "apple"], while a case-insensitive sort gives ["apple",
+    // "boeing"]. A same-case pair would pass under either implementation.
+    const lower = item({ ticker: "apple", companyName: "apple" });
+    const upper = item({ ticker: "Boeing", companyName: "Boeing" });
+    expect(sortHoldings([upper, lower], "ticker", "asc", 600).map((i) => i.ticker)).toEqual([
+      "apple",
+      "Boeing",
+    ]);
+    expect(sortHoldings([lower, upper], "companyName", "asc", 600).map((i) => i.ticker)).toEqual([
+      "apple",
+      "Boeing",
+    ]);
   });
 
   it("derives % of portfolio from the passed total", () => {
