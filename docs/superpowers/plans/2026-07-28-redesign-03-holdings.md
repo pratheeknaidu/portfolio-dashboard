@@ -1593,14 +1593,12 @@ import { useIsMobile } from "@/lib/use-is-mobile";
   const actions = usePositionActions(fetchPortfolio);
   const isMobile = useIsMobile();
 ```
-Delete the old `handleRemoveTicker` definition. The `FailedTickersStrip`'s `onRemove` becomes `(ticker) => actions.remove(items.find((i) => i.ticker === ticker) ?? { ticker } as never)` — **NO.** Simpler: keep the strip removing by ticker via a thin inline handler that finds the item and calls `actions.remove`, or leave the strip's existing remove path. To avoid overreach, keep `FailedTickersStrip`'s remove wired to a small local:
-```tsx
-  const removeByTicker = (ticker: string) => {
-    const found = items.find((i) => i.ticker === ticker);
-    if (found) actions.remove(found);
-  };
-```
-and pass `onRemove={removeByTicker}` to `FailedTickersStrip`. (A failed ticker may not be in `items`; if not found, there is nothing to sheet-confirm — the strip's Retry is the relevant action for those anyway.)
+Delete the old `handleRemoveTicker` definition.
+
+> **DEFECT (found in execution, fixed):** the `FailedTickersStrip`'s remove must NOT route through `actions.remove(item)` — a failed/delisted ticker is filtered out of `items` before the page sees it, so `items.find(...)` returns `undefined` and the position can never be removed. That silently kills the strip's whole purpose (dropping a delisted symbol). Task 5's hook was extended with a direct `removeTicker(ticker)` for exactly this, sharing the one DELETE implementation. Wire the strip to it:
+> ```tsx
+> onRemove={actions.removeTicker}
+> ```
 
 3. Below the `AllocationStrip` block, add the holdings section:
 ```tsx
