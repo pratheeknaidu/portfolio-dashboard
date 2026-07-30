@@ -34,6 +34,7 @@ const demoItem = { ticker: "DEMO" } as unknown as PortfolioItem;
 const mockBuildDemoItems = jest.fn((_range: TimeRange) => [demoItem]);
 jest.mock("@/lib/demo-data", () => ({
   buildDemoItems: (range: TimeRange) => mockBuildDemoItems(range),
+  DEMO_SNAPSHOTS: [{ date: "2026-07-01", totalValue: 1000, holdings: {} }],
 }));
 
 // --- fixtures ---------------------------------------------------------------
@@ -60,10 +61,10 @@ const quote = (over: Partial<Quote> = {}): Quote => ({
 function stubFetch(routes: {
   holdings?: { ok?: boolean; status?: number; body?: unknown };
   quotes?: { ok?: boolean; body?: unknown };
+  snapshots?: { ok?: boolean; body?: unknown; throws?: boolean };
   throws?: boolean;
 }) {
   const fetchMock = jest.fn(async (url: string, init?: RequestInit) => {
-    void init;
     if (routes.throws) throw new Error("offline");
     if (url.startsWith("/api/portfolio")) {
       const r = routes.holdings ?? { ok: true, body: [] };
@@ -72,6 +73,11 @@ function stubFetch(routes: {
         status: r.status ?? 200,
         json: async () => r.body,
       };
+    }
+    if (url.startsWith("/api/snapshot") && (!init || init.method !== "POST")) {
+      const r = routes.snapshots ?? { ok: true, body: [] };
+      if (r.throws) throw new Error("offline");
+      return { ok: r.ok ?? true, status: 200, json: async () => r.body };
     }
     if (url.startsWith("/api/quotes")) {
       const r = routes.quotes ?? { ok: true, body: { quotes: {}, failed: [] } };
@@ -116,7 +122,7 @@ describe("usePortfolioData status", () => {
   it("reports empty when every holding is missing a quote", async () => {
     stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: {}, failed: ["AAPL"] } },
+      quotes: { body: { quotes: {}, failed: [{ ticker: "AAPL", reason: "no_price" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("empty"));
@@ -189,7 +195,7 @@ describe("usePortfolioData merging", () => {
   it("drops holdings with no quote rather than rendering them at zero", async () => {
     stubFetch({
       holdings: { body: [holding(), holding({ ticker: "MSFT" })] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["MSFT"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "MSFT", reason: "no_price" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -199,11 +205,11 @@ describe("usePortfolioData merging", () => {
   it("surfaces the failed tickers for the retry strip", async () => {
     stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["ZZZZ"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "ZZZZ", reason: "unlisted" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.failed).toEqual(["ZZZZ"]);
+    expect(result.current.failed).toEqual([{ ticker: "ZZZZ", reason: "unlisted" }]);
   });
 
   it("tolerates a quotes payload with no failed array", async () => {
@@ -379,7 +385,7 @@ describe("usePortfolioData refresh", () => {
   it("re-fetches on demand, which is what the failed-ticker Retry calls", async () => {
     const fetchMock = stubFetch({
       holdings: { body: [holding()] },
-      quotes: { body: { quotes: { AAPL: quote() }, failed: ["ZZZZ"] } },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [{ ticker: "ZZZZ", reason: "unlisted" }] } },
     });
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -389,5 +395,166 @@ describe("usePortfolioData refresh", () => {
       await result.current.refresh();
     });
     expect(fetchMock.mock.calls.length).toBeGreaterThan(before);
+  });
+});
+
+// --- snapshot history ---------------------------------------------------
+
+describe("usePortfolioData snapshots", () => {
+  const history = [
+    { date: "2026-07-25", totalValue: 1000, holdings: { AAPL: 1000 } },
+    { date: "2026-07-26", totalValue: 1100, holdings: { AAPL: 1100 } },
+  ];
+
+  it("returns snapshot history for the sparkline", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { body: history },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual(history);
+  });
+
+  // A failed history read must not take down a working portfolio: the
+  // sparkline is decoration, the value above it is the point of the screen.
+  it("keeps the portfolio ready when only the history read fails", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { ok: false },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([]);
+  });
+
+  // Distinct from the case above: that one covers a non-ok *response*, this
+  // one covers the history fetch *throwing* (e.g. offline/DNS failure). Both
+  // must be swallowed by the inner try/catch — a decorative history read
+  // must not be able to turn a working portfolio into an error screen.
+  it("keeps the portfolio ready and does not toast when the history read throws", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+      snapshots: { throws: true },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([]);
+    expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it("serves the fixture history in demo mode with no network", async () => {
+    const fetchMock = stubFetch({});
+    isDemo = true;
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.snapshots).toEqual([
+      { date: "2026-07-01", totalValue: 1000, holdings: {} },
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// --- excluded value ---------------------------------------------------------
+
+describe("usePortfolioData excludedValue", () => {
+  // A failed ticker is filtered out of `items` before any consumer sees it, so
+  // its cost basis can only be summed here, where the raw holdings and the
+  // failure list are both in scope. The dashboard prints this so the totals are
+  // not silently understated by the positions that dropped out.
+  it("sums the cost basis of the holdings that failed to quote", async () => {
+    stubFetch({
+      holdings: {
+        body: [holding(), holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 })],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [{ ticker: "ZZZZ", reason: "unlisted" }],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(500); // 10 shares * $50 cost
+  });
+
+  it("adds up multiple failed holdings", async () => {
+    stubFetch({
+      holdings: {
+        body: [
+          holding(),
+          holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 }),
+          holding({ ticker: "HALT", shares: 4, avgCost: 25 }),
+        ],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [
+            { ticker: "ZZZZ", reason: "unlisted" },
+            { ticker: "HALT", reason: "no_price" },
+          ],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(600); // 500 + 4 * 25
+  });
+
+  it("is zero when every quote resolved", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(0);
+  });
+
+  it("is zero in demo mode, which never fails a quote", async () => {
+    stubFetch({});
+    isDemo = true;
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(0);
+  });
+
+  // Regression: a first poll surfaces a failure with a real excluded value;
+  // the next poll's holdings fetch errors. If `failed` is not reset alongside
+  // excludedValue, the strip renders the stale failure with "$0.00 excluded".
+  it("clears the failure list when a later holdings fetch errors", async () => {
+    const fetchMock = stubFetch({
+      holdings: {
+        body: [holding(), holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 })],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [{ ticker: "ZZZZ", reason: "unlisted" }],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.failed).toHaveLength(1);
+    expect(result.current.excludedValue).toBe(500);
+
+    // Next refresh: holdings fetch fails.
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.startsWith("/api/portfolio")) return { ok: false, status: 503, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.failed).toEqual([]);
+    expect(result.current.excludedValue).toBe(0);
   });
 });

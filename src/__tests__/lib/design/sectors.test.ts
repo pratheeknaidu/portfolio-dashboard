@@ -14,8 +14,9 @@ describe("sectorColor", () => {
 });
 
 describe("SECTOR_COLORS", () => {
-  it("covers the ten sectors Yahoo returns", () => {
-    expect(Object.keys(SECTOR_COLORS)).toHaveLength(10);
+  it("covers the eleven sectors Yahoo returns", () => {
+    expect(Object.keys(SECTOR_COLORS)).toHaveLength(11);
+    expect(SECTOR_COLORS).toHaveProperty("Basic Materials");
   });
 
   // The palette must never collide with P&L semantics: a green sector wedge

@@ -2,12 +2,13 @@ import YahooFinance from "yahoo-finance2";
 import type { Quote, TimeRange } from "@/types";
 import { getMockQuotes, getMockVix } from "./yahoo-finance-mock";
 import { candidateSymbols } from "./symbols";
+import { classifyFailure, type FailureReason, type QuoteFailure } from "./quote-failures";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 export interface QuotesResult {
   quotes: Record<string, Quote>;
-  failed: string[];
+  failed: QuoteFailure[];
 }
 
 const CACHE_TTL = 60_000; // 60 seconds
@@ -84,6 +85,12 @@ export async function getQuotes(
   // (e.g. "ETC" → "ETC-USD"), so the chart pass below fetches history for the
   // same symbol the spot quote came from.
   const resolvedSymbol: Record<string, string> = {};
+  // Reason from the most recent candidate's throw, per ticker. A ticker can
+  // pick up an entry here and still end up with a quote (candidate 1 throws,
+  // candidate 2 resolves) — that is expected and handled below: this map is
+  // only consulted for tickers that have no quote once the whole loop is
+  // done, so a since-resolved ticker's stale entry is simply never read.
+  const lastFailureReason: Record<string, FailureReason> = {};
 
   // Fetch each ticker individually to avoid one bad ticker breaking the batch.
   await Promise.allSettled(
@@ -104,8 +111,10 @@ export async function getQuotes(
             resolvedSymbol[ticker] = symbol;
             return;
           }
-        } catch {
-          // Try the next candidate symbol (e.g. the -USD crypto pair).
+        } catch (err) {
+          // Record the reason but keep trying the next candidate symbol (e.g.
+          // the -USD crypto pair) — this ticker may still resolve.
+          lastFailureReason[ticker] = classifyFailure(err);
         }
       }
     })
@@ -131,7 +140,11 @@ export async function getQuotes(
     );
   }
 
-  const failed = tickers.filter((t) => !quotes[t]);
+  // A ticker with no quote and no recorded throw resolved (candidate did not
+  // throw) but carried a falsy regularMarketPrice — that's the no_price case.
+  const failed: QuoteFailure[] = tickers
+    .filter((t) => !quotes[t])
+    .map((ticker) => ({ ticker, reason: lastFailureReason[ticker] ?? "no_price" }));
   const result: QuotesResult = { quotes, failed };
   cache.set(cacheKey, { data: result, timestamp: Date.now() });
   return result;

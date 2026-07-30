@@ -36,7 +36,7 @@ describe("GET /api/quotes", () => {
     (verifyRequest as jest.Mock).mockResolvedValue({ uid: "user123" });
     (getQuotes as jest.Mock).mockResolvedValue({
       quotes: { AAPL: { price: 185.5, change: 2.3, changePercent: 1.25, previousClose: 183.2 } },
-      failed: ["BOGUS"],
+      failed: [{ ticker: "BOGUS", reason: "unlisted" }],
     });
 
     const req = new NextRequest("http://localhost/api/quotes?tickers=AAPL,BOGUS&range=1D", {
@@ -47,7 +47,7 @@ describe("GET /api/quotes", () => {
 
     expect(res.status).toBe(200);
     expect(body.quotes.AAPL.price).toBe(185.5);
-    expect(body.failed).toEqual(["BOGUS"]);
+    expect(body.failed).toEqual([{ ticker: "BOGUS", reason: "unlisted" }]);
   });
 
   it("returns error shape when Yahoo Finance fails", async () => {

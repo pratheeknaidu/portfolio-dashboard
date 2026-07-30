@@ -1,7 +1,8 @@
 /**
- * Sector identity palette. Deliberately contains no green and no red: those
- * hues are reserved for P&L direction, and a green sector wedge sitting beside
- * a green gain figure drains the signal from both.
+ * Sector identity palette, covering all eleven sectors Yahoo Finance returns.
+ * Deliberately contains no green and no red: those hues are reserved for P&L
+ * direction, and a green sector wedge sitting beside a green gain figure
+ * drains the signal from both.
  *
  * Replaces the analogous gold-to-teal sweep in the old chart-palette.ts, which
  * ran straight through the gain hue.
@@ -17,6 +18,7 @@ export const SECTOR_COLORS: Record<string, string> = {
   "Communication Services": "#6cc3d6",
   Utilities: "#7f8f9e",
   Industrials: "#b08a72",
+  "Basic Materials": "#7a5a7d",
 };
 
 /** Aggregate / unknown bucket. Recedes behind the named sectors. */
