@@ -377,12 +377,18 @@ describe("PositionsTable", () => {
       "aria-sort",
       "descending",
     );
+    // A freshly clicked column opens descending (largest first).
+    await userEvent.click(screen.getByRole("button", { name: /shares/i }));
+    expect(screen.getByRole("columnheader", { name: /shares/i })).toHaveAttribute(
+      "aria-sort",
+      "descending",
+    );
+    expect(screen.getByRole("columnheader", { name: /value/i })).not.toHaveAttribute("aria-sort");
     await userEvent.click(screen.getByRole("button", { name: /shares/i }));
     expect(screen.getByRole("columnheader", { name: /shares/i })).toHaveAttribute(
       "aria-sort",
       "ascending",
     );
-    expect(screen.getByRole("columnheader", { name: /value/i })).not.toHaveAttribute("aria-sort");
   });
 
   it("calls onSelect with the row's item when a row is activated", async () => {
@@ -459,8 +465,10 @@ export function PositionsTable({ items, totalValue, onSelect }: PositionsTablePr
     if (key === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
+      // Freshly clicked column opens descending — on a holdings table you want
+      // the largest position first, gain or loss. A second click flips to asc.
       setSortKey(key);
-      setSortDir("asc");
+      setSortDir("desc");
     }
   };
 
