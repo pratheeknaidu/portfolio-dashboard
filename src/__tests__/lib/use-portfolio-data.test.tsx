@@ -523,4 +523,38 @@ describe("usePortfolioData excludedValue", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.excludedValue).toBe(0);
   });
+
+  // Regression: a first poll surfaces a failure with a real excluded value;
+  // the next poll's holdings fetch errors. If `failed` is not reset alongside
+  // excludedValue, the strip renders the stale failure with "$0.00 excluded".
+  it("clears the failure list when a later holdings fetch errors", async () => {
+    const fetchMock = stubFetch({
+      holdings: {
+        body: [holding(), holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 })],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [{ ticker: "ZZZZ", reason: "unlisted" }],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.failed).toHaveLength(1);
+    expect(result.current.excludedValue).toBe(500);
+
+    // Next refresh: holdings fetch fails.
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.startsWith("/api/portfolio")) return { ok: false, status: 503, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.failed).toEqual([]);
+    expect(result.current.excludedValue).toBe(0);
+  });
 });

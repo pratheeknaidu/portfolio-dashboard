@@ -65,6 +65,11 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
       if (!holdingsRes.ok) {
         toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
         setItems([]);
+        // Reset failed alongside items/excludedValue: without the holdings we
+        // no longer know what failed, and a stale failure list would render a
+        // "$0.00 excluded" strip — the exact silent-understatement this field
+        // exists to prevent — beside a zeroed portfolio.
+        setFailed([]);
         setExcludedValue(0);
         setStatus("error");
         return;
