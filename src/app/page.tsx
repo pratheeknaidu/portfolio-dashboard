@@ -39,6 +39,7 @@ export default function DashboardPage() {
     failed: failedTickers,
     status,
     snapshots,
+    excludedValue,
     refresh: fetchPortfolio,
   } = usePortfolioData(range);
 
@@ -158,14 +159,6 @@ export default function DashboardPage() {
   }, [fetchVix]);
 
   const totals = portfolioTotals(items);
-  // failedTickers never overlap items — usePortfolioData filters holdings
-  // without a quote out of items before returning them — so this is always
-  // 0 today. Left in place because it's the correct shape once a failed
-  // ticker's cost basis becomes available to this component; tracked as a
-  // known gap rather than silently dropping the field.
-  const excludedValue = items
-    .filter((i) => failedTickers.some((f) => f.ticker === i.ticker))
-    .reduce((sum, i) => sum + i.shares * i.avgCost, 0);
 
   return (
     <AuthGuard>

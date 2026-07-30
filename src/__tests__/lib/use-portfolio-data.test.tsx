@@ -457,3 +457,70 @@ describe("usePortfolioData snapshots", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+// --- excluded value ---------------------------------------------------------
+
+describe("usePortfolioData excludedValue", () => {
+  // A failed ticker is filtered out of `items` before any consumer sees it, so
+  // its cost basis can only be summed here, where the raw holdings and the
+  // failure list are both in scope. The dashboard prints this so the totals are
+  // not silently understated by the positions that dropped out.
+  it("sums the cost basis of the holdings that failed to quote", async () => {
+    stubFetch({
+      holdings: {
+        body: [holding(), holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 })],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [{ ticker: "ZZZZ", reason: "unlisted" }],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(500); // 10 shares * $50 cost
+  });
+
+  it("adds up multiple failed holdings", async () => {
+    stubFetch({
+      holdings: {
+        body: [
+          holding(),
+          holding({ ticker: "ZZZZ", shares: 10, avgCost: 50 }),
+          holding({ ticker: "HALT", shares: 4, avgCost: 25 }),
+        ],
+      },
+      quotes: {
+        body: {
+          quotes: { AAPL: quote() },
+          failed: [
+            { ticker: "ZZZZ", reason: "unlisted" },
+            { ticker: "HALT", reason: "no_price" },
+          ],
+        },
+      },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(600); // 500 + 4 * 25
+  });
+
+  it("is zero when every quote resolved", async () => {
+    stubFetch({
+      holdings: { body: [holding()] },
+      quotes: { body: { quotes: { AAPL: quote() }, failed: [] } },
+    });
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(0);
+  });
+
+  it("is zero in demo mode, which never fails a quote", async () => {
+    stubFetch({});
+    isDemo = true;
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.excludedValue).toBe(0);
+  });
+});

@@ -20,6 +20,12 @@ export interface PortfolioData {
   failed: QuoteFailure[];
   status: PortfolioStatus;
   snapshots: Snapshot[];
+  /**
+   * Cost basis of the holdings that failed to quote. Summed here because a
+   * failed ticker is dropped from `items`, so no consumer can recover it — and
+   * the dashboard prints it so the totals are not silently understated.
+   */
+  excludedValue: number;
   refresh: () => Promise<void>;
 }
 
@@ -36,6 +42,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
   const [failed, setFailed] = useState<QuoteFailure[]>([]);
   const [status, setStatus] = useState<PortfolioStatus>("loading");
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const [excludedValue, setExcludedValue] = useState(0);
 
   const refresh = useCallback(async () => {
     // Demo mode is fully offline: render the static fixture and skip every
@@ -43,6 +50,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
     if (isDemo) {
       setItems(buildDemoItems(range));
       setFailed([]);
+      setExcludedValue(0);
       setSnapshots(DEMO_SNAPSHOTS);
       setStatus("ready");
       return;
@@ -57,12 +65,14 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
       if (!holdingsRes.ok) {
         toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
         setItems([]);
+        setExcludedValue(0);
         setStatus("error");
         return;
       }
       const holdings: Holding[] = await holdingsRes.json();
       if (!Array.isArray(holdings) || holdings.length === 0) {
         setItems([]);
+        setExcludedValue(0);
         setStatus("empty");
         return;
       }
@@ -80,6 +90,16 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
       }
       const { quotes, failed: failedTickers }: QuotesResponse = await quotesRes.json();
       setFailed(failedTickers ?? []);
+
+      // Summed from the raw holdings, not from `items` — the failed tickers are
+      // filtered out of `items` below, so this is the only place their cost
+      // basis survives.
+      const failedSet = new Set((failedTickers ?? []).map((f) => f.ticker));
+      setExcludedValue(
+        holdings
+          .filter((h) => failedSet.has(h.ticker))
+          .reduce((sum, h) => sum + h.shares * h.avgCost, 0),
+      );
 
       const merged: PortfolioItem[] = holdings
         .filter((h) => quotes[h.ticker])
@@ -133,5 +153,5 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  return { items, failed, status, snapshots, refresh };
+  return { items, failed, status, snapshots, excludedValue, refresh };
 }
