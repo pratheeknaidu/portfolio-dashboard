@@ -1,240 +1,133 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AuthGuard } from "@/components/AuthGuard";
-import { Navbar } from "@/components/Navbar";
-import { SectorChart } from "@/components/SectorChart";
-import { EquityAllocationChart } from "@/components/EquityAllocationChart";
-import { PerformanceChart } from "@/components/PerformanceChart";
-import { HoldingsTable } from "@/components/HoldingsTable";
+import { AppShell } from "@/components/AppShell";
+import { TopBar } from "@/components/TopBar";
+import { PerformanceCard } from "@/components/PerformanceCard";
+import { AllocationStrip } from "@/components/AllocationStrip";
+import { SectorPLCard } from "@/components/SectorPLCard";
+import { AnalystSentimentCard } from "@/components/AnalystSentimentCard";
+import { ValuationCard } from "@/components/ValuationCard";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
+import { EmptyPortfolio } from "@/components/EmptyPortfolio";
+import { CsvImportModal } from "@/components/CsvImportModal";
+import { AddHoldingModal } from "@/components/AddHoldingModal";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
-import { buildDemoItems, getDemoValuations, DEMO_SNAPSHOTS } from "@/lib/demo-data";
-import { CsvImportModal } from "@/components/CsvImportModal";
-import { AddHoldingModal } from "@/components/AddHoldingModal";
-import { EditHoldingModal } from "@/components/EditHoldingModal";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { AnalystSentimentCard } from "@/components/AnalystSentimentCard";
-import { ValuationCard } from "@/components/ValuationCard";
-import type { Holding, Quote, QuoteFailure, PortfolioItem, Snapshot, ValuationData } from "@/types";
+import { usePortfolioData } from "@/lib/use-portfolio-data";
+import { isMarketOpen } from "@/lib/market-hours";
+import { getDemoValuations } from "@/lib/demo-data";
+import type { ValuationData } from "@/types";
 
 export default function AnalyticsPage() {
-  const { getIdToken } = useAuth();
+  const { getIdToken, signOut } = useAuth();
   const toast = useToast();
   const isDemo = useIsDemo();
-  const [items, setItems] = useState<PortfolioItem[]>([]);
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
+  const { items, status, snapshots, refresh } = usePortfolioData("1D");
   const [valuations, setValuations] = useState<Record<string, ValuationData>>({});
   const [showImport, setShowImport] = useState(false);
   const [showAddHolding, setShowAddHolding] = useState(false);
-  const [editing, setEditing] = useState<PortfolioItem | null>(null);
-  const [deleting, setDeleting] = useState<PortfolioItem | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    // Demo mode: render the static fixture, no network.
+  // The two valuation cards are the only consumers of valuation data, and
+  // usePortfolioData does not fetch it — so keep a dedicated fetch here, keyed
+  // off the holdings the hook returns. Demo mode stays fully offline.
+  const fetchValuations = useCallback(async () => {
     if (isDemo) {
-      setItems(buildDemoItems());
       setValuations(getDemoValuations());
-      setSnapshots(DEMO_SNAPSHOTS);
       return;
     }
-
+    if (items.length === 0) {
+      setValuations({});
+      return;
+    }
     const token = await getIdToken();
     if (!token) return;
-    const headers = { Authorization: `Bearer ${token}` };
-
+    const tickers = items.map((i) => i.ticker).join(",");
     try {
-      const holdingsRes = await fetch("/api/portfolio", { headers });
-      if (!holdingsRes.ok) {
-        toast.error(`Couldn't load your holdings (${holdingsRes.status}).`);
-        return;
-      }
-      const holdings: Holding[] = await holdingsRes.json();
-
-      if (Array.isArray(holdings) && holdings.length > 0) {
-        const tickers = holdings.map((h) => h.ticker).join(",");
-        const quotesRes = await fetch(`/api/quotes?tickers=${tickers}`, { headers });
-        if (!quotesRes.ok) {
-          toast.error("Quotes service is unavailable.");
-        } else {
-          const { quotes }: { quotes: Record<string, Quote>; failed: QuoteFailure[] } = await quotesRes.json();
-          setItems(
-            holdings.filter((h) => quotes[h.ticker]).map((h) => {
-              const q = quotes[h.ticker];
-              const mv = h.shares * q.price;
-              const cb = h.shares * h.avgCost;
-              return {
-                ...h,
-                quote: q,
-                marketValue: mv,
-                totalPL: mv - cb,
-                totalPLPercent: ((mv - cb) / cb) * 100,
-              };
-            })
-          );
-
-          const valuationsRes = await fetch(`/api/valuations?tickers=${tickers}`, { headers });
-          if (valuationsRes.ok) {
-            setValuations(await valuationsRes.json());
-          } else {
-            setValuations({});
-          }
-        }
-      } else {
-        setItems([]);
-        setValuations({});
-      }
-
-      const snapshotsRes = await fetch("/api/snapshot", { headers });
-      if (snapshotsRes.ok) {
-        const data = await snapshotsRes.json();
-        setSnapshots(data);
-      }
+      const res = await fetch(`/api/valuations?tickers=${tickers}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setValuations(res.ok ? await res.json() : {});
     } catch (err) {
-      console.error("Analytics fetchData failed:", err);
-      toast.error("Network error — couldn't load analytics.");
+      console.error("Analytics fetchValuations failed:", err);
+      setValuations({});
     }
-  }, [getIdToken, toast, isDemo]);
+  }, [isDemo, items, getIdToken]);
 
-  // In demo mode every mutation is redirected to a sign-in nudge instead of
-  // opening a modal that would POST without a token.
+  useEffect(() => {
+    fetchValuations();
+  }, [fetchValuations]);
+
+  // In demo mode the write modals would POST without a token and fail, so the
+  // import/add affordances redirect intent to signing in instead.
   const openImport = useCallback(() => {
-    if (isDemo) return toast.info("Sign in to import your own holdings.");
+    if (isDemo) {
+      toast.info("Sign in to import your own holdings.");
+      return;
+    }
     setShowImport(true);
   }, [isDemo, toast]);
 
   const openAddHolding = useCallback(() => {
-    if (isDemo) return toast.info("Sign in to add your own holdings.");
+    if (isDemo) {
+      toast.info("Sign in to add your own holdings.");
+      return;
+    }
     setShowAddHolding(true);
   }, [isDemo, toast]);
 
-  const handleEdit = useCallback((item: PortfolioItem) => {
-    if (isDemo) return toast.info("Sign in to edit your holdings.");
-    setEditing(item);
-  }, [isDemo, toast]);
-
-  const handleDelete = useCallback((item: PortfolioItem) => {
-    if (isDemo) return toast.info("Sign in to remove holdings.");
-    setDeleteError(null);
-    setDeleting(item);
-  }, [isDemo, toast]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deleting) return;
-    setDeleteError(null);
-    const token = await getIdToken();
-    const res = await fetch(`/api/portfolio/${deleting.ticker}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setDeleteError(body.error || `Delete failed (${res.status})`);
-      return;
-    }
-    setDeleting(null);
-    fetchData();
-  }, [deleting, getIdToken, fetchData]);
-
-  const totalValue = items.reduce((s, i) => s + i.marketValue, 0);
-  const sectors = items.reduce<Record<string, number>>((acc, i) => {
-    acc[i.sector || "Unknown"] = (acc[i.sector || "Unknown"] || 0) + i.marketValue;
-    return acc;
-  }, {});
-
   return (
     <AuthGuard>
-      <div className="flex flex-col h-screen">
-        <Navbar
-          onImportClick={openImport}
-          onAddClick={openAddHolding}
-        />
-        <main className="flex-1 overflow-auto p-4 md:p-6 space-y-6 md:space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Sector Allocation
-              </h2>
-              <SectorChart sectors={sectors} />
-            </section>
-            <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Performance Over Time
-              </h2>
-              <PerformanceChart snapshots={snapshots} />
-            </section>
-          </div>
-          <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
-            <h2 className="text-lg font-semibold text-white mb-4">
-              Equity Allocation
-            </h2>
-            <EquityAllocationChart items={items} />
-          </section>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <AnalystSentimentCard items={items} valuations={valuations} />
-            <ValuationCard items={items} valuations={valuations} />
-          </div>
-          <section className="bg-surface-card rounded-lg p-4 md:p-6 border border-surface-border">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Holdings</h2>
-              <button
-                type="button"
-                onClick={openAddHolding}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-surface-bg border border-surface-border text-gray-300 hover:text-white hover:border-accent transition"
-              >
-                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add
-              </button>
+      <AppShell
+        topBar={
+          <TopBar
+            onImportClick={openImport}
+            onAddClick={openAddHolding}
+            onSignOut={signOut}
+            isDemo={isDemo}
+            marketOpen={isMarketOpen()}
+            vix={null}
+          />
+        }
+      >
+        {status === "loading" ? (
+          <DashboardSkeleton />
+        ) : status === "empty" ? (
+          <EmptyPortfolio onImportClick={openImport} onAddClick={openAddHolding} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <PerformanceCard snapshots={snapshots} />
+            <AllocationStrip items={items} />
+            <SectorPLCard items={items} />
+            <div className="flex flex-col gap-4">
+              <AnalystSentimentCard items={items} valuations={valuations} />
+              <ValuationCard items={items} valuations={valuations} />
             </div>
-            <HoldingsTable
-              items={items}
-              totalValue={totalValue}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          </section>
-        </main>
-      </div>
+          </div>
+        )}
+      </AppShell>
+
       {showImport && (
         <CsvImportModal
           onClose={() => setShowImport(false)}
-          onAddSingle={() => { setShowImport(false); setShowAddHolding(true); }}
-          onSuccess={() => { setShowImport(false); fetchData(); }}
+          onAddSingle={() => {
+            setShowImport(false);
+            setShowAddHolding(true);
+          }}
+          onSuccess={() => {
+            setShowImport(false);
+            refresh();
+          }}
         />
       )}
       {showAddHolding && (
         <AddHoldingModal
           onClose={() => setShowAddHolding(false)}
-          onSuccess={() => { setShowAddHolding(false); fetchData(); }}
-        />
-      )}
-      {editing && (
-        <EditHoldingModal
-          holding={editing}
-          onClose={() => setEditing(null)}
-          onSuccess={() => { setEditing(null); fetchData(); }}
-        />
-      )}
-      {deleting && (
-        <ConfirmDialog
-          title="Remove holding?"
-          message={
-            deleteError
-              ? `${deleteError} — try again, or cancel.`
-              : `Remove ${deleting.ticker} from your portfolio?`
-          }
-          confirmLabel="Delete"
-          destructive
-          onConfirm={handleConfirmDelete}
-          onCancel={() => { setDeleting(null); setDeleteError(null); }}
+          onSuccess={() => {
+            setShowAddHolding(false);
+            refresh();
+          }}
         />
       )}
     </AuthGuard>
