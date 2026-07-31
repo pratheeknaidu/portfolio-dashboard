@@ -6,9 +6,9 @@ import { VIX_BANDS, type VixApiResponse, type VixTone } from "@/lib/vix-sentimen
 // (opportunity) gets a more saturated fill — not a copy-paste bug.
 const TONE_STYLES: Record<VixTone, string> = {
   caution:     "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  neutral:     "bg-surface-elevated/60 text-muted-foreground border-border/60",
-  accumulate:  "bg-positive/10 text-positive border-positive/30",
-  opportunity: "bg-positive/20 text-positive border-positive/50",
+  neutral:     "bg-rd-inset text-rd-muted border-rd-border",
+  accumulate:  "bg-rd-gain/10 text-rd-gain border-rd-gain/30",
+  opportunity: "bg-rd-gain/20 text-rd-gain border-rd-gain/50",
 };
 
 const DISCLAIMER =
@@ -92,19 +92,19 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
           role="dialog"
           aria-modal="true"
           aria-label="How VIX maps to market sentiment"
-          className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-border/60 bg-surface-elevated p-4 text-left shadow-xl shadow-black/20"
+          className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-xl border border-rd-border bg-rd-card p-4 text-left shadow-xl shadow-black/20"
         >
-          <p className="font-display text-sm font-semibold text-foreground">
+          <p className="text-sm font-semibold text-rd-text">
             How this reads the market
           </p>
-          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+          <p className="mt-1 text-xs leading-snug text-rd-muted">
             VIX is the market&rsquo;s expected 30-day volatility — its &ldquo;fear
             gauge.&rdquo; This uses a contrarian lens: the more fear, the better the
             opportunity.
           </p>
           <table className="mt-3 w-full border-collapse text-xs">
             <thead>
-              <tr className="text-muted-foreground">
+              <tr className="text-rd-muted">
                 <th className="py-1 pr-2 text-left font-medium">VIX</th>
                 <th className="py-1 pr-2 text-left font-medium">Mood</th>
                 <th className="py-1 text-left font-medium">What I&rsquo;d do</th>
@@ -118,8 +118,8 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
                     key={b.band}
                     className={
                       active
-                        ? "bg-positive/10 font-semibold text-foreground"
-                        : "text-muted-foreground"
+                        ? "bg-rd-gain/10 font-semibold text-rd-text"
+                        : "text-rd-muted"
                     }
                   >
                     <td className="whitespace-nowrap py-1 pr-2 tabular-nums">{b.band}</td>
@@ -129,7 +129,7 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
                       {active && (
                         <span
                           aria-label="current band"
-                          className="ml-1 text-positive"
+                          className="ml-1 text-rd-gain"
                         >
                           ◀ now
                         </span>
@@ -140,7 +140,7 @@ export function VixPill({ data }: { data: VixApiResponse | null }) {
               })}
             </tbody>
           </table>
-          <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-3 text-[11px] leading-snug text-rd-muted">
             {DISCLAIMER}
           </p>
         </div>

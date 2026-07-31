@@ -31,21 +31,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         <h1 className="text-2xl font-bold">Portfolio Dashboard</h1>
         <button
           onClick={signIn}
-          className="px-6 py-3 bg-accent rounded-lg text-white font-medium hover:bg-accent-dark"
+          className="px-6 py-3 bg-rd-control border border-rd-border-strong rounded-lg text-rd-text font-medium hover:border-rd-border-stronger"
         >
           Sign in with Google
         </button>
         {isSandbox && (
           <button
             onClick={signInAsSandbox}
-            className="px-6 py-3 bg-surface-card border border-surface-border rounded-lg text-gray-200 font-medium hover:bg-surface-border"
+            className="px-6 py-3 bg-rd-card border border-rd-border rounded-lg text-gray-200 font-medium hover:bg-rd-inset"
           >
             Sign in as sandbox user
           </button>
         )}
         <Link
           href="/demo"
-          className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          className="text-sm text-rd-muted underline underline-offset-4 hover:text-rd-text"
         >
           Or explore a live demo, no sign-in →
         </Link>

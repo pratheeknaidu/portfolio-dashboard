@@ -105,16 +105,16 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
 
         {!result ? (
           <>
-            <div className="flex gap-1 mb-4 bg-surface-bg rounded-lg p-1">
+            <div className="flex gap-1 mb-4 bg-rd-inset rounded-lg p-1">
               <button
                 onClick={() => setMode("paste")}
-                className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${mode === "paste" ? "bg-accent text-white" : "text-gray-400 hover:text-white"}`}
+                className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${mode === "paste" ? "bg-rd-control text-rd-text" : "text-gray-400 hover:text-white"}`}
               >
                 Paste from Robinhood
               </button>
               <button
                 onClick={() => setMode("csv")}
-                className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${mode === "csv" ? "bg-accent text-white" : "text-gray-400 hover:text-white"}`}
+                className={`flex-1 px-3 py-1.5 text-sm rounded-md transition ${mode === "csv" ? "bg-rd-control text-rd-text" : "text-gray-400 hover:text-white"}`}
               >
                 Upload CSV
               </button>
@@ -129,7 +129,7 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
                       href="https://robinhood.com/account/investing"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-accent hover:underline"
+                      className="text-rd-text hover:underline"
                     >
                       robinhood.com/account/investing
                     </a>
@@ -143,7 +143,7 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
                   onChange={(e) => setPasteText(e.target.value)}
                   placeholder="Paste positions text here..."
                   aria-label="Paste positions"
-                  className="w-full h-40 bg-surface-bg border border-surface-border rounded-lg p-3 text-sm text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-accent"
+                  className="w-full h-40 bg-rd-inset border border-rd-border rounded-lg p-3 text-sm text-gray-300 placeholder-gray-600 resize-none focus:outline-none focus:border-rd-border-strong"
                 />
               </>
             ) : (
@@ -163,7 +163,7 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
               </>
             )}
 
-            {error && <p className="text-loss text-sm mb-2">{error}</p>}
+            {error && <p className="text-rd-loss text-sm mb-2">{error}</p>}
             <div className="flex justify-end gap-3 mt-4">
               <button onClick={onClose} className="px-4 py-2 text-sm text-gray-400 hover:text-white">
                 Cancel
@@ -171,7 +171,7 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit || loading}
-                className="px-4 py-2 text-sm bg-accent rounded-lg text-white disabled:opacity-50"
+                className="px-4 py-2 text-sm bg-rd-control border border-rd-border-strong rounded-lg text-rd-text hover:border-rd-border-stronger disabled:opacity-50"
               >
                 {loading ? "Importing..." : "Import"}
               </button>
@@ -182,7 +182,7 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
                 <button
                   type="button"
                   onClick={onAddSingle}
-                  className="text-accent hover:underline"
+                  className="text-rd-text hover:underline"
                 >
                   Add a single stock by hand
                 </button>
@@ -192,21 +192,21 @@ export function CsvImportModal({ onClose, onSuccess, onAddSingle }: Props) {
         ) : (
           <div className="space-y-2 text-sm">
             {result.imported.length > 0 && (
-              <p className="text-gain">Imported: {result.imported.join(", ")}</p>
+              <p className="text-rd-gain">Imported: {result.imported.join(", ")}</p>
             )}
             {result.updated.length > 0 && (
-              <p className="text-accent">Updated: {result.updated.join(", ")}</p>
+              <p className="text-rd-secondary">Updated: {result.updated.join(", ")}</p>
             )}
             {result.removed.length > 0 && (
-              <p className="text-loss">Removed: {result.removed.join(", ")}</p>
+              <p className="text-rd-loss">Removed: {result.removed.join(", ")}</p>
             )}
             {result.errors.length > 0 && (
-              <div className="text-loss">
+              <div className="text-rd-loss">
                 <p>Errors:</p>
                 {result.errors.map((e, i) => <p key={i}>{e}</p>)}
               </div>
             )}
-            <button onClick={handleResultClose} className="mt-4 px-4 py-2 text-sm bg-surface-border rounded text-white">
+            <button onClick={handleResultClose} className="mt-4 px-4 py-2 text-sm bg-rd-inset rounded text-white">
               Close
             </button>
           </div>

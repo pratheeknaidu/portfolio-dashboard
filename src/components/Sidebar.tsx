@@ -47,7 +47,7 @@ export function Sidebar({ items }: Props) {
       {/* Today's Change */}
       <div className="mb-2">
         <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Today&apos;s Change</div>
-        <div className={`font-semibold ${todayChange >= 0 ? "text-gain" : "text-loss"}`}>
+        <div className={`font-semibold ${todayChange >= 0 ? "text-rd-gain" : "text-rd-loss"}`}>
           {fmtSigned(todayChange)} ({todayChangePct >= 0 ? "+" : ""}{todayChangePct.toFixed(2)}%)
         </div>
       </div>
@@ -55,7 +55,7 @@ export function Sidebar({ items }: Props) {
       {/* All-Time Return */}
       <div className="mb-4">
         <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">All-Time Return</div>
-        <div className={`font-semibold ${allTimeReturn >= 0 ? "text-gain" : "text-loss"}`}>
+        <div className={`font-semibold ${allTimeReturn >= 0 ? "text-rd-gain" : "text-rd-loss"}`}>
           {fmtSigned(allTimeReturn)} ({allTimeReturnPct >= 0 ? "+" : ""}{allTimeReturnPct.toFixed(2)}%)
         </div>
       </div>
@@ -66,7 +66,7 @@ export function Sidebar({ items }: Props) {
         {topMovers.map((item) => (
           <div key={item.ticker} className="flex justify-between items-center py-1">
             <span className="text-white font-medium">{item.ticker}</span>
-            <span className={item.quote.changePercent >= 0 ? "text-gain" : "text-loss"}>
+            <span className={item.quote.changePercent >= 0 ? "text-rd-gain" : "text-rd-loss"}>
               {item.quote.changePercent >= 0 ? "+" : ""}
               {item.quote.changePercent.toFixed(2)}%
             </span>
@@ -85,9 +85,9 @@ export function Sidebar({ items }: Props) {
                 <span className="text-white">{sector}</span>
                 <span className="text-gray-400">{pct.toFixed(1)}%</span>
               </div>
-              <div className="h-1.5 bg-surface-border rounded-full overflow-hidden">
+              <div className="h-1.5 bg-rd-inset rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-accent rounded-full"
+                  className="h-full bg-rd-flat rounded-full"
                   style={{ width: `${pct}%` }}
                 />
               </div>

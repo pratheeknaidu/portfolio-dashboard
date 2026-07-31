@@ -62,7 +62,7 @@ export function EditHoldingModal({ holding, onClose, onSuccess }: Props) {
               step="any"
               value={Number.isFinite(shares) ? shares : ""}
               onChange={(e) => setShares(parseFloat(e.target.value))}
-              className="w-full bg-surface-bg border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+              className="w-full bg-rd-inset border border-rd-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rd-border-strong"
             />
           </div>
           <div>
@@ -73,12 +73,12 @@ export function EditHoldingModal({ holding, onClose, onSuccess }: Props) {
               step="any"
               value={Number.isFinite(avgCost) ? avgCost : ""}
               onChange={(e) => setAvgCost(parseFloat(e.target.value))}
-              className="w-full bg-surface-bg border border-surface-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent"
+              className="w-full bg-rd-inset border border-rd-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rd-border-strong"
             />
           </div>
         </div>
 
-        {error && <p className="text-loss text-sm mt-3">{error}</p>}
+        {error && <p className="text-rd-loss text-sm mt-3">{error}</p>}
 
         <div className="flex justify-end gap-3 mt-6">
           <button
@@ -93,7 +93,7 @@ export function EditHoldingModal({ holding, onClose, onSuccess }: Props) {
             type="button"
             onClick={handleSave}
             disabled={!valid || saving}
-            className="px-4 py-2 text-sm bg-accent rounded-lg text-white disabled:opacity-50"
+            className="px-4 py-2 text-sm bg-rd-control border border-rd-border-strong rounded-lg text-rd-text hover:border-rd-border-stronger disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
