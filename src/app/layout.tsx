@@ -23,18 +23,6 @@ const monoFont = JetBrains_Mono({
   display: "swap",
 });
 
-// --font-display still has ~14 consumers on the not-yet-migrated screens, so
-// it is re-pointed at the same family rather than deleted. It has to be its
-// own loader call: `bodyFont.variable` is the literal string "--font-body",
-// so aliasing the constant would leave --font-display undefined and drop
-// every heading in the app to system-ui until plan 4 removes the last use.
-const displayFont = Instrument_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-display",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://robinhood-portfolio.vercel.app"),
   title: "Portfolio Dashboard",
@@ -53,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`dark ${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
+      className={`dark ${bodyFont.variable} ${monoFont.variable}`}
     >
       <body className="min-h-screen overflow-x-hidden">
         <AuthProvider>
