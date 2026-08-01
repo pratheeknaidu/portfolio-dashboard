@@ -35,6 +35,9 @@ const mockBuildDemoItems = jest.fn((_range: TimeRange) => [demoItem]);
 jest.mock("@/lib/demo-data", () => ({
   buildDemoItems: (range: TimeRange) => mockBuildDemoItems(range),
   DEMO_SNAPSHOTS: [{ date: "2026-07-01", totalValue: 1000, holdings: {} }],
+  DEMO_HOLDINGS: [
+    { ticker: "AAPL", companyName: "Apple Inc.", sector: "Technology", shares: 100, avgCost: 100, addedAt: "2026-01-02T00:00:00.000Z" },
+  ],
 }));
 
 // --- fixtures ---------------------------------------------------------------
@@ -311,26 +314,56 @@ describe("usePortfolioData requests", () => {
 
 // --- demo mode --------------------------------------------------------------
 
+// Route the two public demo endpoints; anything else 404s so a stray call fails.
+function stubDemoFetch(over: { quotes?: unknown; history?: unknown } = {}) {
+  const fetchMock = jest.fn(async (url: string) => {
+    if (url.startsWith("/api/demo/quotes")) {
+      return { ok: true, json: async () => over.quotes ?? { quotes: { AAPL: quote() }, failed: [] } };
+    }
+    if (url.startsWith("/api/demo/history")) {
+      return { ok: true, json: async () => over.history ?? [] };
+    }
+    return { ok: false, json: async () => ({}) };
+  });
+  global.fetch = fetchMock as unknown as typeof fetch;
+  return fetchMock;
+}
+
 describe("usePortfolioData in demo mode", () => {
-  // Demo mode is fully offline: any network call here would 401 without a token
-  // and, worse, the snapshot write would attempt to persist fixture data.
-  it("renders the fixture and makes no network call at all", async () => {
-    const fetchMock = stubFetch({});
+  // Demo mode now shows real market data via the public, unauthenticated demo
+  // endpoints (no user token), merging live quotes with the fixed holdings.
+  it("fetches the demo endpoints and merges real quotes", async () => {
+    const fetchMock = stubDemoFetch({
+      quotes: { quotes: { AAPL: quote({ price: 110 }) }, failed: [] },
+      history: [{ date: "2026-07-01", totalValue: 1234, holdings: {} }],
+    });
     isDemo = true;
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(result.current.items).toEqual([demoItem]);
-    expect(result.current.failed).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(mockGetIdToken).not.toHaveBeenCalled();
+    expect(result.current.items[0].ticker).toBe("AAPL");
+    expect(result.current.items[0].marketValue).toBe(11000); // 100 shares * 110
+    expect(result.current.snapshots[0].totalValue).toBe(1234);
+    expect(fetchMock).toHaveBeenCalledWith("/api/demo/quotes?range=1D");
+    expect(mockGetIdToken).not.toHaveBeenCalled(); // no auth in demo
   });
 
-  it("builds the fixture for the selected range", async () => {
-    stubFetch({});
+  it("requests the demo quotes for the selected range", async () => {
+    const fetchMock = stubDemoFetch();
     isDemo = true;
     const { result } = render("1Y");
     await waitFor(() => expect(result.current.status).toBe("ready"));
-    expect(mockBuildDemoItems).toHaveBeenCalledWith("1Y");
+    expect(fetchMock).toHaveBeenCalledWith("/api/demo/quotes?range=1Y");
+  });
+
+  it("falls back to the offline fixture when the demo API is unreachable", async () => {
+    global.fetch = jest.fn(async () => {
+      throw new Error("offline");
+    }) as unknown as typeof fetch;
+    isDemo = true;
+    const { result } = render();
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.items).toEqual([demoItem]); // buildDemoItems fallback
+    expect(mockBuildDemoItems).toHaveBeenCalledWith("1D");
   });
 });
 
@@ -446,15 +479,14 @@ describe("usePortfolioData snapshots", () => {
     expect(mockToastError).not.toHaveBeenCalled();
   });
 
-  it("serves the fixture history in demo mode with no network", async () => {
-    const fetchMock = stubFetch({});
+  it("uses the demo history endpoint for snapshots in demo mode", async () => {
+    stubDemoFetch({ history: [{ date: "2026-07-02", totalValue: 2000, holdings: {} }] });
     isDemo = true;
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.snapshots).toEqual([
-      { date: "2026-07-01", totalValue: 1000, holdings: {} },
+      { date: "2026-07-02", totalValue: 2000, holdings: {} },
     ]);
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
@@ -517,7 +549,7 @@ describe("usePortfolioData excludedValue", () => {
   });
 
   it("is zero in demo mode, which never fails a quote", async () => {
-    stubFetch({});
+    stubDemoFetch();
     isDemo = true;
     const { result } = render();
     await waitFor(() => expect(result.current.status).toBe("ready"));

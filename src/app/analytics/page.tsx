@@ -34,7 +34,12 @@ export default function AnalyticsPage() {
   // off the holdings the hook returns. Demo mode stays fully offline.
   const fetchValuations = useCallback(async () => {
     if (isDemo) {
-      setValuations(getDemoValuations());
+      try {
+        const res = await fetch(`/api/demo/valuations`);
+        setValuations(res.ok ? await res.json() : getDemoValuations());
+      } catch {
+        setValuations(getDemoValuations());
+      }
       return;
     }
     if (items.length === 0) {

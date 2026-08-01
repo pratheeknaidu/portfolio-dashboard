@@ -7,13 +7,15 @@ import type {
   RecommendationKey,
 } from "@/types";
 import { getMockQuotes } from "@/lib/yahoo-finance-mock";
+import { mergeHoldingsWithQuotes } from "@/lib/design/merge-quotes";
 
 /**
- * Static fixture powering the public `/demo` experience. Everything here is
- * deterministic and offline: holdings are hard-coded, quotes come from the
- * existing mock generator, valuations/snapshots are hash-seeded. No auth, no
- * Firestore, no network — a recruiter or curious visitor can explore the real
- * UI without signing in, and nothing they do writes anywhere.
+ * The fixed sample portfolio behind the public `/demo` experience. The holdings
+ * are hard-coded; in production the demo merges them with LIVE market data from
+ * the `/api/demo/*` endpoints. The mock quotes, hash-seeded valuations, and
+ * synthetic snapshots below are the deterministic OFFLINE fallback — used under
+ * SANDBOX_MODE, in tests, and if the upstream is unavailable. No auth, no
+ * Firestore, no writes: a visitor can explore the real UI without signing in.
  *
  * The holdings mirror scripts/seed-emulator.ts so the demo and the local
  * sandbox tell the same story.
@@ -41,6 +43,16 @@ export const DEMO_HOLDINGS: Holding[] = [
   { ticker: "PLD",   companyName: "Prologis Inc.",       sector: "Real Estate",            shares: 35, avgCost: 118.0,  addedAt: "2026-01-02T00:00:00.000Z" },
 ];
 
+/** Allowlist for the demo endpoints — the only tickers they will ever fetch. */
+export const DEMO_TICKERS: string[] = DEMO_HOLDINGS.map((h) => h.ticker);
+
+/**
+ * Yahoo symbols for demo tickers whose display ticker is not the Yahoo symbol.
+ * The demo set is fixed, so the one class-share exception is hard-mapped rather
+ * than resolved at runtime. Anything not listed uses its ticker as-is.
+ */
+export const DEMO_YAHOO_SYMBOL: Record<string, string> = { BRK: "BRK-B" };
+
 function hash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
@@ -56,19 +68,7 @@ function hash(s: string): number {
 export function buildDemoItems(range: TimeRange = "1D"): PortfolioItem[] {
   const tickers = DEMO_HOLDINGS.map((h) => h.ticker);
   const quotes = getMockQuotes(tickers, range === "ALL" ? "1D" : range);
-
-  return DEMO_HOLDINGS.filter((h) => quotes[h.ticker]).map((h) => {
-    const q = quotes[h.ticker];
-    const marketValue = h.shares * q.price;
-    const costBasis = h.shares * h.avgCost;
-    const totalPL = marketValue - costBasis;
-    const totalPLPercent = (totalPL / costBasis) * 100;
-    const quote =
-      range === "ALL"
-        ? { ...q, change: q.price - h.avgCost, changePercent: totalPLPercent }
-        : q;
-    return { ...h, quote, marketValue, totalPL, totalPLPercent };
-  });
+  return mergeHoldingsWithQuotes(DEMO_HOLDINGS, quotes, range);
 }
 
 const RECOMMENDATIONS: { key: RecommendationKey; mean: number }[] = [

@@ -11,7 +11,7 @@ export function DemoBanner() {
     <div className="relative z-40 flex items-center justify-center gap-x-3 gap-y-1 flex-wrap px-4 py-2 text-xs font-medium bg-rd-control text-rd-body border-b border-rd-border">
       <span>
         <span className="font-semibold text-rd-text">Demo</span> — you&rsquo;re
-        exploring a sample portfolio with mock market data.
+        exploring a sample portfolio with live market data.
       </span>
       <Link
         href="/"
