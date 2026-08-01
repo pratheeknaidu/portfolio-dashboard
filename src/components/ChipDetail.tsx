@@ -37,10 +37,10 @@ export function ChipDetail({ item, v }: { item: PortfolioItem; v: ValuationData 
 
   return (
     <div className="text-sm">
-      <div className="font-display text-base font-semibold text-foreground">
+      <div className="text-base font-semibold text-rd-text">
         {item.companyName}
       </div>
-      <div className="text-xs text-muted-foreground mb-3 mt-0.5">
+      <div className="text-xs text-rd-muted mb-3 mt-0.5">
         <span className="font-mono">{item.ticker}</span>
         <span className="mx-1.5 opacity-40">·</span>
         {item.sector}
@@ -48,55 +48,55 @@ export function ChipDetail({ item, v }: { item: PortfolioItem; v: ValuationData 
 
       {/* Price */}
       <div className="flex items-baseline justify-between mb-3">
-        <span className="font-mono text-foreground">{fmt(item.quote.price)}</span>
-        <span className={`font-mono text-xs ${dayChange >= 0 ? "text-positive" : "text-negative"}`}>
+        <span className="font-mono text-rd-text">{fmt(item.quote.price)}</span>
+        <span className={`font-mono text-xs ${dayChange >= 0 ? "text-rd-gain" : "text-rd-loss"}`}>
           {fmt(dayChange)} ({item.quote.changePercent.toFixed(2)}%)
         </span>
       </div>
 
       {/* Analyst sentiment */}
-      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Analyst Rating</div>
+      <div className="text-xs text-rd-muted uppercase tracking-wide mb-1">Analyst Rating</div>
       <div className="flex items-baseline justify-between mb-3 text-xs">
-        <span className="text-foreground font-medium">{recLabel}</span>
-        <span className="font-mono text-muted-foreground">
+        <span className="text-rd-text font-medium">{recLabel}</span>
+        <span className="font-mono text-rd-muted">
           {v.recommendationMean !== undefined ? v.recommendationMean.toFixed(1) : "—"}
           {v.numberOfAnalystOpinions ? ` · ${v.numberOfAnalystOpinions} analysts` : ""}
         </span>
       </div>
 
       {/* Price target range */}
-      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Price Target</div>
+      <div className="text-xs text-rd-muted uppercase tracking-wide mb-1">Price Target</div>
       {hasRange ? (
         <div className="mb-3">
-          <div data-testid="target-range-bar" className="relative h-1.5 rounded-full bg-surface-border my-2">
+          <div data-testid="target-range-bar" className="relative h-1.5 rounded-full bg-rd-inset my-2">
             <div
               data-testid="current-marker"
-              className="absolute -top-1 w-1 h-3.5 rounded bg-foreground"
+              className="absolute -top-1 w-1 h-3.5 rounded bg-rd-text"
               style={{ left: `${markerPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+          <div className="flex justify-between text-[10px] font-mono text-rd-muted">
             <span>{fmtWhole(v.targetLowPrice as number)}</span>
             {v.targetMeanPrice !== undefined && (
-              <span className="text-foreground">avg {fmtWhole(v.targetMeanPrice)}</span>
+              <span className="text-rd-text">avg {fmtWhole(v.targetMeanPrice)}</span>
             )}
             <span>{fmtWhole(v.targetHighPrice as number)}</span>
           </div>
           {v.upsideToTargetPct !== undefined && (
-            <div className={`text-[11px] mt-1 text-right font-mono ${v.upsideToTargetPct >= 0 ? "text-positive" : "text-negative"}`}>
+            <div className={`text-[11px] mt-1 text-right font-mono ${v.upsideToTargetPct >= 0 ? "text-rd-gain" : "text-rd-loss"}`}>
               {pct(v.upsideToTargetPct)} to avg
             </div>
           )}
         </div>
       ) : (
-        <div className="text-xs text-muted-foreground mb-3">No price targets</div>
+        <div className="text-xs text-rd-muted mb-3">No price targets</div>
       )}
 
       {/* Fair value */}
       {v.fairValueDescription && (
         <div className="flex items-baseline justify-between mb-3 text-xs">
-          <span className="text-muted-foreground">Fair Value</span>
-          <span className="text-foreground">
+          <span className="text-rd-muted">Fair Value</span>
+          <span className="text-rd-text">
             {v.fairValueDescription}
             {v.fairValueDiscountPct !== undefined ? ` (${pct(v.fairValueDiscountPct)})` : ""}
           </span>
@@ -104,14 +104,14 @@ export function ChipDetail({ item, v }: { item: PortfolioItem; v: ValuationData 
       )}
 
       {/* Your position */}
-      <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1 mt-3">Your Position</div>
+      <div className="text-xs text-rd-muted uppercase tracking-wide mb-1 mt-3">Your Position</div>
       <div className="grid grid-cols-2 gap-y-1.5 text-xs">
-        <span className="text-muted-foreground">Shares</span>
-        <span className="text-right font-mono text-foreground">{item.shares}</span>
-        <span className="text-muted-foreground">Market Value</span>
-        <span className="text-right font-mono text-foreground">{fmt(item.marketValue)}</span>
-        <span className="text-muted-foreground">Total P&L</span>
-        <span className={`text-right font-mono ${item.totalPL >= 0 ? "text-positive" : "text-negative"}`}>
+        <span className="text-rd-muted">Shares</span>
+        <span className="text-right font-mono text-rd-text">{item.shares}</span>
+        <span className="text-rd-muted">Market Value</span>
+        <span className="text-right font-mono text-rd-text">{fmt(item.marketValue)}</span>
+        <span className="text-rd-muted">Total P&L</span>
+        <span className={`text-right font-mono ${item.totalPL >= 0 ? "text-rd-gain" : "text-rd-loss"}`}>
           {fmt(item.totalPL)} ({item.totalPLPercent.toFixed(1)}%)
         </span>
       </div>

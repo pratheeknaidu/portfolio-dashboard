@@ -49,7 +49,7 @@ export function DetailPanel({ rect, onClose, children }: DetailPanelProps) {
   const { top, left } = position(rect);
   return (
     <div
-      className="bento-card fixed z-50 p-5 text-sm pointer-events-none transition-[top,left] duration-100 ease-out"
+      className="fixed z-50 rounded-xl border border-rd-border bg-rd-card p-5 text-sm shadow-[0_14px_34px_#00000099] pointer-events-none transition-[top,left] duration-100 ease-out"
       style={{ top, left, width: PANEL_W }}
     >
       {children}

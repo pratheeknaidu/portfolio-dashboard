@@ -96,7 +96,7 @@ export default function DashboardPage() {
   // Dismiss the pinned tooltip on Escape OR any click outside a tile.
   // Tile onClick handlers call stopPropagation, so clicks that reach the
   // document listener are guaranteed to be outside the treemap — that
-  // covers Sidebar / Navbar / Hero card / empty-state / etc. without
+  // covers Sidebar / TopBar / Hero card / empty-state / etc. without
   // each parent needing its own onClick={dismiss}.
   useEffect(() => {
     if (!selectedItem) return;

@@ -45,8 +45,8 @@ export function Sheet({ open, onClose, children, labelledBy }: SheetProps) {
   };
 
   // Portal to document.body so the fixed-position overlay escapes any
-  // ancestor that creates a new containing block (e.g. `backdrop-filter` on
-  // .bento-card would otherwise clip the overlay to the card's bounds).
+  // ancestor that creates a new containing block (e.g. a `backdrop-filter`
+  // card would otherwise clip the overlay to the card's bounds).
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60"
@@ -59,7 +59,7 @@ export function Sheet({ open, onClose, children, labelledBy }: SheetProps) {
       <div
         ref={panelRef}
         onClick={(e) => e.stopPropagation()}
-        className="w-full md:w-auto md:max-w-lg max-h-[85vh] md:max-h-[90vh] overflow-y-auto bg-surface-card border border-surface-border rounded-t-2xl md:rounded-xl shadow-2xl"
+        className="w-full md:w-auto md:max-w-lg max-h-[85vh] md:max-h-[90vh] overflow-y-auto bg-rd-card border border-rd-border rounded-t-2xl md:rounded-xl shadow-2xl"
       >
         {children}
       </div>

@@ -30,13 +30,13 @@ describe("VixPill", () => {
 
   it("applies the tone-specific color class to the pill", () => {
     render(<VixPill data={sample} />);
-    expect(screen.getByText("VIX 28.5").parentElement).toHaveClass("bg-positive/20");
+    expect(screen.getByText("VIX 28.5").parentElement).toHaveClass("bg-rd-gain/20");
   });
 
   it("falls back to the neutral tone class when tone is absent", () => {
     render(<VixPill data={{ value: 16.2, message: "Stay the course" }} />);
     expect(screen.getByText("VIX 16.2").parentElement).toHaveClass(
-      "bg-surface-elevated/60",
+      "bg-rd-inset",
     );
   });
 

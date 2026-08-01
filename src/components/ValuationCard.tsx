@@ -12,10 +12,10 @@ interface Props {
 type VBucketId = "deep_value" | "undervalued" | "fair" | "overvalued";
 
 const BUCKETS: { id: VBucketId; label: string; chipClass: string }[] = [
-  { id: "deep_value",  label: "Deep Value",    chipClass: "bg-positive/30 text-positive border-positive/40" },
-  { id: "undervalued", label: "Undervalued",   chipClass: "bg-positive/15 text-positive/90 border-positive/25" },
-  { id: "fair",        label: "Fairly Priced", chipClass: "bg-surface-border text-gray-300 border-surface-border" },
-  { id: "overvalued",  label: "Overvalued",    chipClass: "bg-negative/20 text-negative/90 border-negative/30" },
+  { id: "deep_value",  label: "Deep Value",    chipClass: "bg-rd-gain/30 text-rd-gain border-rd-gain/40" },
+  { id: "undervalued", label: "Undervalued",   chipClass: "bg-rd-gain/15 text-rd-gain/90 border-rd-gain/25" },
+  { id: "fair",        label: "Fairly Priced", chipClass: "bg-rd-inset text-gray-300 border-rd-inset" },
+  { id: "overvalued",  label: "Overvalued",    chipClass: "bg-rd-loss/20 text-rd-loss/90 border-rd-loss/30" },
 ];
 
 function bucketFor(v: ValuationData | undefined): VBucketId | undefined {
@@ -71,7 +71,7 @@ export function ValuationCard({ items, valuations }: Props) {
   const { selected, rect, select } = useDetailSelection<PortfolioItem>();
 
   return (
-    <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
+    <section className="bg-rd-card rounded-lg p-6 border border-rd-border">
       <h2 className="text-lg font-semibold text-white mb-4">Valuation</h2>
       <div className="flex flex-col gap-4 md:grid md:grid-cols-4 md:gap-2">
         {BUCKETS.map(({ id, label, chipClass }) => (

@@ -32,8 +32,8 @@ export function ConfirmDialog({
   };
 
   const confirmClass = destructive
-    ? "bg-loss hover:bg-loss/90"
-    : "bg-accent hover:bg-accent-dark";
+    ? "bg-rd-loss/15 border border-rd-loss/50 text-rd-loss hover:bg-rd-loss/25"
+    : "bg-rd-control border border-rd-border-strong text-rd-text hover:border-rd-border-stronger";
 
   return (
     <Sheet open onClose={() => { if (!pending) onCancel(); }} labelledBy="confirm-dialog-title">
@@ -54,7 +54,7 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             disabled={pending}
             aria-label={confirmLabel}
-            className={`px-4 py-2 text-sm rounded-lg text-white disabled:opacity-50 ${confirmClass}`}
+            className={`px-4 py-2 text-sm rounded-lg disabled:opacity-50 ${confirmClass}`}
           >
             {pending ? "Working..." : confirmLabel}
           </button>

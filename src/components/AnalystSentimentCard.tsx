@@ -12,11 +12,11 @@ interface Props {
 type BucketId = "strong_buy" | "buy" | "hold" | "sell" | "strong_sell";
 
 const BUCKETS: { id: BucketId; label: string; chipClass: string }[] = [
-  { id: "strong_buy",  label: "Strong Buy",  chipClass: "bg-positive/30 text-positive border-positive/40" },
-  { id: "buy",         label: "Buy",         chipClass: "bg-positive/15 text-positive/90 border-positive/25" },
-  { id: "hold",        label: "Hold",        chipClass: "bg-surface-border text-gray-300 border-surface-border" },
-  { id: "sell",        label: "Sell",        chipClass: "bg-negative/15 text-negative/90 border-negative/25" },
-  { id: "strong_sell", label: "Strong Sell", chipClass: "bg-negative/30 text-negative border-negative/40" },
+  { id: "strong_buy",  label: "Strong Buy",  chipClass: "bg-rd-gain/30 text-rd-gain border-rd-gain/40" },
+  { id: "buy",         label: "Buy",         chipClass: "bg-rd-gain/15 text-rd-gain/90 border-rd-gain/25" },
+  { id: "hold",        label: "Hold",        chipClass: "bg-rd-inset text-gray-300 border-rd-inset" },
+  { id: "sell",        label: "Sell",        chipClass: "bg-rd-loss/15 text-rd-loss/90 border-rd-loss/25" },
+  { id: "strong_sell", label: "Strong Sell", chipClass: "bg-rd-loss/30 text-rd-loss border-rd-loss/40" },
 ];
 
 function bucketFor(key: RecommendationKey | undefined): BucketId | undefined {
@@ -50,7 +50,7 @@ export function AnalystSentimentCard({ items, valuations }: Props) {
   const { selected, rect, select } = useDetailSelection<PortfolioItem>();
 
   return (
-    <section className="bg-surface-card rounded-lg p-6 border border-surface-border">
+    <section className="bg-rd-card rounded-lg p-6 border border-rd-border">
       <h2 className="text-lg font-semibold text-white mb-4">Analyst Sentiment</h2>
       <div className="flex flex-col gap-4 md:grid md:grid-cols-5 md:gap-2">
         {BUCKETS.map(({ id, label, chipClass }) => (

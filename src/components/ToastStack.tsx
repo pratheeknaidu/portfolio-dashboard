@@ -3,9 +3,9 @@
 import { useToast, type ToastKind } from "@/lib/toast-context";
 
 const STYLES: Record<ToastKind, string> = {
-  error: "bg-loss/15 border-loss/60 text-loss",
-  info: "bg-accent/15 border-accent/60 text-accent",
-  success: "bg-gain/15 border-gain/60 text-gain",
+  error: "bg-rd-loss/15 border-rd-loss/60 text-rd-loss",
+  info: "bg-rd-control border-rd-border-strong text-rd-body",
+  success: "bg-rd-gain/15 border-rd-gain/60 text-rd-gain",
 };
 
 export function ToastStack() {
