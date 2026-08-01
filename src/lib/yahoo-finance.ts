@@ -149,3 +149,21 @@ export async function getQuotes(
   cache.set(cacheKey, { data: result, timestamp: Date.now() });
   return result;
 }
+
+/**
+ * Daily closes for a symbol back to `period1`, normalised to `{ date, close }`.
+ * The one place chart history is fetched, so the yahoo-finance2 instance and
+ * its typing stay with the other Yahoo calls.
+ */
+export async function getChartCloses(
+  symbol: string,
+  period1: Date,
+): Promise<{ date: string; close: number }[]> {
+  const chart = await yahooFinance.chart(symbol, { period1 });
+  return chart.quotes
+    .filter((q) => q.close != null && q.date != null)
+    .map((q) => ({
+      date: new Date(q.date).toISOString().split("T")[0],
+      close: q.close as number,
+    }));
+}
