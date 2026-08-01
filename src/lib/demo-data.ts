@@ -42,6 +42,16 @@ export const DEMO_HOLDINGS: Holding[] = [
   { ticker: "PLD",   companyName: "Prologis Inc.",       sector: "Real Estate",            shares: 35, avgCost: 118.0,  addedAt: "2026-01-02T00:00:00.000Z" },
 ];
 
+/** Allowlist for the demo endpoints — the only tickers they will ever fetch. */
+export const DEMO_TICKERS: string[] = DEMO_HOLDINGS.map((h) => h.ticker);
+
+/**
+ * Yahoo symbols for demo tickers whose display ticker is not the Yahoo symbol.
+ * The demo set is fixed, so the one class-share exception is hard-mapped rather
+ * than resolved at runtime. Anything not listed uses its ticker as-is.
+ */
+export const DEMO_YAHOO_SYMBOL: Record<string, string> = { BRK: "BRK-B" };
+
 function hash(s: string): number {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
