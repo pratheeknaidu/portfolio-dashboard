@@ -10,11 +10,12 @@ import { getMockQuotes } from "@/lib/yahoo-finance-mock";
 import { mergeHoldingsWithQuotes } from "@/lib/design/merge-quotes";
 
 /**
- * Static fixture powering the public `/demo` experience. Everything here is
- * deterministic and offline: holdings are hard-coded, quotes come from the
- * existing mock generator, valuations/snapshots are hash-seeded. No auth, no
- * Firestore, no network — a recruiter or curious visitor can explore the real
- * UI without signing in, and nothing they do writes anywhere.
+ * The fixed sample portfolio behind the public `/demo` experience. The holdings
+ * are hard-coded; in production the demo merges them with LIVE market data from
+ * the `/api/demo/*` endpoints. The mock quotes, hash-seeded valuations, and
+ * synthetic snapshots below are the deterministic OFFLINE fallback — used under
+ * SANDBOX_MODE, in tests, and if the upstream is unavailable. No auth, no
+ * Firestore, no writes: a visitor can explore the real UI without signing in.
  *
  * The holdings mirror scripts/seed-emulator.ts so the demo and the local
  * sandbox tell the same story.

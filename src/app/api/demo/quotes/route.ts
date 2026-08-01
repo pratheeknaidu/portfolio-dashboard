@@ -3,6 +3,10 @@ import { unstable_cache } from "next/cache";
 import { demoQuotes } from "@/lib/demo-market-data";
 import type { TimeRange } from "@/types";
 
+// Live-data endpoint: compute per request (deduped/cached by unstable_cache and
+// the edge via Cache-Control), never prerendered at build against Yahoo.
+export const dynamic = "force-dynamic";
+
 const RANGES = ["1D", "1W", "1M", "3M", "YTD", "1Y", "ALL"];
 
 // Data Cache: one shared upstream fetch per range per 60s across all instances,

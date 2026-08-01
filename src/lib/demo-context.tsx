@@ -3,11 +3,13 @@
 import { createContext, useContext } from "react";
 
 /**
- * Demo mode is a public, read-only render of the dashboard backed entirely by
- * a static fixture (no auth, no Firestore, no network). The `/demo` route
- * segment wraps its subtree in <DemoProvider> so every component below can ask
- * `useIsDemo()` without prop-threading. Outside that segment the context
- * defaults to `false`, so the real (authenticated) app is untouched.
+ * Demo mode is a public, read-only render of the dashboard over a fixed sample
+ * portfolio (no auth, no Firestore, no writes). Its market data is live: the
+ * demo branch reads the unauthenticated, cached `/api/demo/*` endpoints, which
+ * fall back to a static fixture if the upstream is unavailable. The `/demo`
+ * route segment wraps its subtree in <DemoProvider> so every component below
+ * can ask `useIsDemo()` without prop-threading. Outside that segment the
+ * context defaults to `false`, so the real (authenticated) app is untouched.
  */
 const DemoContext = createContext<boolean>(false);
 
