@@ -7,6 +7,7 @@ import type {
   RecommendationKey,
 } from "@/types";
 import { getMockQuotes } from "@/lib/yahoo-finance-mock";
+import { mergeHoldingsWithQuotes } from "@/lib/design/merge-quotes";
 
 /**
  * Static fixture powering the public `/demo` experience. Everything here is
@@ -56,19 +57,7 @@ function hash(s: string): number {
 export function buildDemoItems(range: TimeRange = "1D"): PortfolioItem[] {
   const tickers = DEMO_HOLDINGS.map((h) => h.ticker);
   const quotes = getMockQuotes(tickers, range === "ALL" ? "1D" : range);
-
-  return DEMO_HOLDINGS.filter((h) => quotes[h.ticker]).map((h) => {
-    const q = quotes[h.ticker];
-    const marketValue = h.shares * q.price;
-    const costBasis = h.shares * h.avgCost;
-    const totalPL = marketValue - costBasis;
-    const totalPLPercent = (totalPL / costBasis) * 100;
-    const quote =
-      range === "ALL"
-        ? { ...q, change: q.price - h.avgCost, changePercent: totalPLPercent }
-        : q;
-    return { ...h, quote, marketValue, totalPL, totalPLPercent };
-  });
+  return mergeHoldingsWithQuotes(DEMO_HOLDINGS, quotes, range);
 }
 
 const RECOMMENDATIONS: { key: RecommendationKey; mean: number }[] = [

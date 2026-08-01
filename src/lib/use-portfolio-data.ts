@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
 import { buildDemoItems, DEMO_SNAPSHOTS } from "@/lib/demo-data";
+import { mergeHoldingsWithQuotes } from "@/lib/design/merge-quotes";
 import { isMarketOpen } from "@/lib/market-hours";
 import type { Holding, PortfolioItem, Quote, QuoteFailure, Snapshot, TimeRange } from "@/types";
 
@@ -106,22 +107,7 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
           .reduce((sum, h) => sum + h.shares * h.avgCost, 0),
       );
 
-      const merged: PortfolioItem[] = holdings
-        .filter((h) => quotes[h.ticker])
-        .map((h) => {
-          const q = quotes[h.ticker];
-          const marketValue = h.shares * q.price;
-          const costBasis = h.shares * h.avgCost;
-          const totalPL = marketValue - costBasis;
-          const totalPLPercent = (totalPL / costBasis) * 100;
-          // In ALL mode the "change" a tile colours by is lifetime P&L, not
-          // the day move, so the treemap and the range pill agree.
-          const quote: Quote =
-            range === "ALL"
-              ? { ...q, change: q.price - h.avgCost, changePercent: totalPLPercent }
-              : q;
-          return { ...h, quote, marketValue, totalPL, totalPLPercent };
-        });
+      const merged = mergeHoldingsWithQuotes(holdings, quotes, range);
 
       setItems(merged);
       setStatus(merged.length === 0 ? "empty" : "ready");
