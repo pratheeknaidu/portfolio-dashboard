@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/lib/toast-context";
 import { useIsDemo } from "@/lib/demo-context";
-import { buildDemoItems, DEMO_SNAPSHOTS } from "@/lib/demo-data";
+import { buildDemoItems, DEMO_HOLDINGS, DEMO_SNAPSHOTS } from "@/lib/demo-data";
 import { mergeHoldingsWithQuotes } from "@/lib/design/merge-quotes";
 import { isMarketOpen } from "@/lib/market-hours";
 import type { Holding, PortfolioItem, Quote, QuoteFailure, Snapshot, TimeRange } from "@/types";
@@ -46,14 +46,30 @@ export function usePortfolioData(range: TimeRange): PortfolioData {
   const [excludedValue, setExcludedValue] = useState(0);
 
   const refresh = useCallback(async () => {
-    // Demo mode is fully offline: render the static fixture and skip every
-    // network call, including the snapshot write.
+    // Demo mode shows real market data through the public, unauthenticated demo
+    // endpoints — no user token, no snapshot write. The endpoints already fall
+    // back to the fixture server-side; the catch here is a second net for a
+    // network error reaching our own API, so the demo always renders.
     if (isDemo) {
-      setItems(buildDemoItems(range));
-      setFailed([]);
-      setExcludedValue(0);
-      setSnapshots(DEMO_SNAPSHOTS);
-      setStatus("ready");
+      try {
+        const [qRes, hRes] = await Promise.all([
+          fetch(`/api/demo/quotes?range=${range}`),
+          fetch(`/api/demo/history`),
+        ]);
+        const { quotes } = await qRes.json();
+        const merged = mergeHoldingsWithQuotes(DEMO_HOLDINGS, quotes, range);
+        setItems(merged);
+        setSnapshots(hRes.ok ? await hRes.json() : []);
+        setFailed([]);
+        setExcludedValue(0);
+        setStatus(merged.length === 0 ? "empty" : "ready");
+      } catch {
+        setItems(buildDemoItems(range));
+        setSnapshots(DEMO_SNAPSHOTS);
+        setFailed([]);
+        setExcludedValue(0);
+        setStatus("ready");
+      }
       return;
     }
 
