@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ToastProvider } from "@/lib/toast-context";
@@ -52,6 +53,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </ToastProvider>
           </PreferencesProvider>
         </AuthProvider>
+        {/* Imported from `@vercel/analytics/next` rather than `/react` so
+            pageviews are attributed to the route pattern (e.g. /demo/holdings)
+            instead of a raw URL. Cookieless, so no consent banner is needed. */}
+        <Analytics />
       </body>
     </html>
   );

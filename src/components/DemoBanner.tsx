@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { track } from "@vercel/analytics";
 
 /**
  * Slim strip shown above the app in demo mode. Sets expectations (this is
@@ -15,6 +16,7 @@ export function DemoBanner() {
       </span>
       <Link
         href="/"
+        onClick={() => track("demo_signin_click")}
         className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-rd-text bg-rd-control border border-rd-border-strong hover:-translate-y-px transition-transform"
       >
         Sign in to track your own →
