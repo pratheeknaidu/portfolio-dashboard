@@ -73,6 +73,15 @@ Security rules (`firestore.rules`) only allow access where `request.auth.uid == 
 
 `src/app/page.tsx` polls `/api/portfolio` + `/api/quotes` on mount and every 60s **only when `isMarketOpen()`** (ET-aware, weekday-aware — `src/lib/market-hours.ts`). After fetch, it POSTs to `/api/snapshot` which writes a daily snapshot keyed by `today` (idempotent overwrite).
 
+### Morning newsletter (`src/lib/newsletter/`, `src/app/api/cron/newsletter/`)
+
+Vercel Cron (`vercel.json`, `0 12 * * 1-5` UTC ≈ 7–8am ET weekdays) hits `GET /api/cron/newsletter`. This route is the one exception to the `verifyRequest` pattern: it authenticates with `Authorization: Bearer $CRON_SECRET` (Vercel sends this automatically) and refuses to run if `CRON_SECRET` is unset. `?dryRun=1` returns rendered previews without sending.
+
+- Recipients are opt-in via `NEWSLETTER_EMAILS` (comma-separated); each is resolved to a uid with `adminAuth.getUserByEmail`.
+- `buildReport()` is pure and holds all the rules: movers by dollar contribution, P&L by sector, top 1-month sector ETF momentum (SPDR `XL*` + `SPY`), take-profit flags (gain ≥ 25% plus a concrete reason: above analyst target, overvalued, bearish consensus, ≥15% concentration, or ≥100% gain), and bearish big losers.
+- `writeNarrative()` adds a Claude-written briefing with web search when `ANTHROPIC_API_KEY` is set; on any failure it returns null and the email goes out with only the rule-based sections. Model output is escaped and rendered from a tiny markdown subset (`narrativeToHtml`).
+- Email is sent through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM`; the default `onboarding@resend.dev` sender only delivers to the Resend account owner's address).
+
 ### Tests
 
 - Unit tests live in `src/__tests__/{api,components,lib}`; jest uses the `next/jest` preset with `jsdom`.
@@ -89,4 +98,4 @@ Security rules (`firestore.rules`) only allow access where `request.auth.uid == 
 
 ## Deployment
 
-Vercel project is linked (`.vercel/` present). Production requires `FIREBASE_SERVICE_ACCOUNT` (JSON string) plus the six `NEXT_PUBLIC_FIREBASE_*` vars. `USE_EMULATOR` / `SANDBOX_MODE` must NOT be set in production.
+Vercel project is linked (`.vercel/` present). Production requires `FIREBASE_SERVICE_ACCOUNT` (JSON string) plus the six `NEXT_PUBLIC_FIREBASE_*` vars. `USE_EMULATOR` / `SANDBOX_MODE` must NOT be set in production. The newsletter additionally needs `CRON_SECRET`, `NEWSLETTER_EMAILS`, `RESEND_API_KEY`, and (optionally) `ANTHROPIC_API_KEY`.
