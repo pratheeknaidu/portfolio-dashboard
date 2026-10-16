@@ -1,13 +1,12 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import type { NewsletterReport } from "./build-report";
 
-const MODEL = "claude-opus-5-5";
-// A paused server-tool turn (long web search) is resumed by re-sending; cap it.
-const MAX_CONTINUATIONS = 3;
+// "-latest" alias tracks Google's current Flash model, which the free tier covers.
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 const SYSTEM = `You write a short morning briefing for one retail investor about their own stock portfolio.
 You receive a JSON report computed from their holdings for the most recent trading session.
-Use web search to find the actual news behind the biggest movers and the leading sectors — earnings, guidance, macro data, analyst actions. Do not invent catalysts; if you can't find a reason, say the move looks market-driven.
+Use Google Search to find the actual news behind the biggest movers and the leading sectors — earnings, guidance, macro data, analyst actions. Do not invent catalysts; if you can't find a reason, say the move looks market-driven.
 
 Write these sections, each starting with a "### " heading line:
 ### What drove yesterday
@@ -23,54 +22,27 @@ Rules:
 
 /**
  * Optional LLM layer over the rule-based report: explains *why* things moved
- * using web search. Returns null when no API key is configured or the call
- * fails, so the email still goes out with the deterministic sections.
+ * using Gemini grounded in Google Search. Returns null when no API key is
+ * configured or the call fails (including free-tier quota errors), so the
+ * email still goes out with the deterministic sections.
  */
 export async function writeNarrative(report: NewsletterReport): Promise<string | null> {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-
-  const client = new Anthropic();
-  const messages: Anthropic.Beta.BetaMessageParam[] = [
-    { role: "user", content: `Portfolio report:\n${JSON.stringify(report)}` },
-  ];
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
 
   try {
-    for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
-      const response = await client.beta.messages.create({
-        model: MODEL,
-        max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        output_config: { effort: "medium" },
-        system: SYSTEM,
-        tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 6 }],
-        messages,
-      });
-
-      if (response.stop_reason === "pause_turn") {
-        messages.push({ role: "assistant", content: response.content });
-        continue;
-      }
-      if (response.stop_reason === "refusal") {
-        console.error("newsletter narrative refused:", response.stop_details);
-        return null;
-      }
-
-      const text = response.content
-        .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("")
-        .trim();
-      return text || null;
-    }
-    console.error("newsletter narrative: exceeded continuation limit");
-    return null;
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+      contents: `Portfolio report:\n${JSON.stringify(report)}`,
+      config: {
+        systemInstruction: SYSTEM,
+        tools: [{ googleSearch: {} }],
+      },
+    });
+    return response.text?.trim() || null;
   } catch (err) {
-    if (err instanceof Anthropic.APIError) {
-      console.error(`newsletter narrative API error ${err.status}:`, err.message);
-    } else {
-      console.error("newsletter narrative failed:", err);
-    }
+    console.error("newsletter narrative failed:", err);
     return null;
   }
 }

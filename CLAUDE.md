@@ -79,7 +79,7 @@ Vercel Cron (`vercel.json`, `0 12 * * 1-5` UTC ≈ 7–8am ET weekdays) hits `GE
 
 - Recipients are opt-in via `NEWSLETTER_EMAILS` (comma-separated); each is resolved to a uid with `adminAuth.getUserByEmail`.
 - `buildReport()` is pure and holds all the rules: movers by dollar contribution, P&L by sector, top 1-month sector ETF momentum (SPDR `XL*` + `SPY`), take-profit flags (gain ≥ 25% plus a concrete reason: above analyst target, overvalued, bearish consensus, ≥15% concentration, or ≥100% gain), and bearish big losers.
-- `writeNarrative()` adds a Claude-written briefing with web search when `ANTHROPIC_API_KEY` is set; on any failure it returns null and the email goes out with only the rule-based sections. Model output is escaped and rendered from a tiny markdown subset (`narrativeToHtml`).
+- `writeNarrative()` adds a Gemini-written briefing grounded in Google Search when `GEMINI_API_KEY` is set (free tier; model defaults to `gemini-flash-latest`, override with `GEMINI_MODEL`); on any failure it returns null and the email goes out with only the rule-based sections. Model output is escaped and rendered from a tiny markdown subset (`narrativeToHtml`).
 - Email is sent through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM`; the default `onboarding@resend.dev` sender only delivers to the Resend account owner's address).
 
 ### Tests
@@ -98,4 +98,4 @@ Vercel Cron (`vercel.json`, `0 12 * * 1-5` UTC ≈ 7–8am ET weekdays) hits `GE
 
 ## Deployment
 
-Vercel project is linked (`.vercel/` present). Production requires `FIREBASE_SERVICE_ACCOUNT` (JSON string) plus the six `NEXT_PUBLIC_FIREBASE_*` vars. `USE_EMULATOR` / `SANDBOX_MODE` must NOT be set in production. The newsletter additionally needs `CRON_SECRET`, `NEWSLETTER_EMAILS`, `RESEND_API_KEY`, and (optionally) `ANTHROPIC_API_KEY`.
+Vercel project is linked (`.vercel/` present). Production requires `FIREBASE_SERVICE_ACCOUNT` (JSON string) plus the six `NEXT_PUBLIC_FIREBASE_*` vars. `USE_EMULATOR` / `SANDBOX_MODE` must NOT be set in production. The newsletter additionally needs `CRON_SECRET`, `NEWSLETTER_EMAILS`, `RESEND_API_KEY`, and (optionally) `GEMINI_API_KEY`.
