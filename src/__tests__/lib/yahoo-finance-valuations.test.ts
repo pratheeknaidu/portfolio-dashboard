@@ -160,6 +160,16 @@ describe("getValuations", () => {
     expect(result.SPY).toBeUndefined();
   });
 
+  it("skips yahoo-finance2 schema validation on insights so new Yahoo fields don't discard the result", async () => {
+    const { getValuations } = await import("@/lib/yahoo-finance-valuations");
+    mockInsights.mockResolvedValue(buildInsights({ description: "Overvalued" }));
+    mockQuoteSummary.mockResolvedValue(buildFinancialData({}));
+
+    const result = await getValuations(["AAPL"]);
+    expect(mockInsights).toHaveBeenCalledWith("AAPL", {}, { validateResult: false });
+    expect(result.AAPL.fairValueDescription).toBe("Overvalued");
+  });
+
   it("does not poison the batch when one ticker's insights call rejects", async () => {
     const { getValuations } = await import("@/lib/yahoo-finance-valuations");
     mockInsights.mockImplementation((t: string) =>
