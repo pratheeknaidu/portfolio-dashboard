@@ -10,6 +10,8 @@ import { renderHtml, renderText, subjectFor } from "./render-email";
 export interface Newsletter {
   report: NewsletterReport;
   narrative: string | null;
+  /** Why the AI briefing is missing, when it is. */
+  narrativeError?: string;
   subject: string;
   html: string;
   text: string;
@@ -54,11 +56,12 @@ export async function buildNewsletter(
     etfMoves,
     failedTickers: failed.map((f) => f.ticker),
   });
-  const narrative = await writeNarrative(report);
+  const { text: narrative, error: narrativeError } = await writeNarrative(report);
 
   return {
     report,
     narrative,
+    narrativeError,
     subject: subjectFor(report),
     html: renderHtml(report, narrative),
     text: renderText(report, narrative),

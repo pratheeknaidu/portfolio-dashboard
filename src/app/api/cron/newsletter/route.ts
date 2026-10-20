@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   const sent: string[] = [];
   const skipped: string[] = [];
   const failed: string[] = [];
-  const previews: { to: string; subject: string; html: string }[] = [];
+  const previews: { to: string; subject: string; html: string; narrativeError?: string }[] = [];
 
   for (const email of emails) {
     try {
@@ -55,7 +55,12 @@ export async function GET(req: NextRequest) {
         continue;
       }
       if (dryRun) {
-        previews.push({ to: email, subject: newsletter.subject, html: newsletter.html });
+        previews.push({
+          to: email,
+          subject: newsletter.subject,
+          html: newsletter.html,
+          narrativeError: newsletter.narrativeError,
+        });
       } else {
         await sendEmail({ to: email, subject: newsletter.subject, html: newsletter.html, text: newsletter.text });
       }

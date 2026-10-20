@@ -37,7 +37,11 @@ function normalizeRecKey(raw: unknown): RecommendationKey | undefined {
 
 async function fetchOne(ticker: string): Promise<ValuationData | undefined> {
   const [insightsRes, summaryRes] = await Promise.allSettled([
-    yahooFinance.insights(ticker),
+    // Yahoo now returns extra fields (secReports[].edgarUrl/exhibits, events
+    // missing tradingHorizon) that yahoo-finance2 3.x's strict schema rejects,
+    // which threw away the fair-value data on every call. We only read
+    // instrumentInfo.valuation and validate it ourselves below.
+    yahooFinance.insights(ticker, {}, { validateResult: false }),
     yahooFinance.quoteSummary(ticker, { modules: ["financialData"] }),
   ]);
 

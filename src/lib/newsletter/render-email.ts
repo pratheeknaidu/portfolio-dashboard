@@ -88,7 +88,7 @@ export function renderHtml(report: NewsletterReport, narrative: string | null): 
     report.benchmarkChangePercent !== undefined
       ? ` &middot; S&amp;P 500 (SPY) ${signed(pct(report.benchmarkChangePercent), report.benchmarkChangePercent)}`
       : "";
-  parts.push(`<p style="font-size:13px;color:${MUTED};margin:0">Last trading session</p>
+  parts.push(`<p style="font-size:13px;color:${MUTED};margin:0">Today's session</p>
 <p style="font-size:28px;margin:4px 0">${signed(money(t.dayChange), t.dayChange)} <span style="font-size:18px">${signed(pct(t.dayChangePercent), t.dayChange)}</span></p>
 <p style="margin:0;font-size:14px">Portfolio value $${t.totalValue.toLocaleString("en-US", { maximumFractionDigits: 0 })} &middot; Total P&amp;L ${signed(`${money(t.totalPL)} (${pct(t.totalPLPercent)})`, t.totalPL)}${bench}</p>`);
 
@@ -170,7 +170,7 @@ export function renderText(report: NewsletterReport, narrative: string | null): 
   const t = report.totals;
   const lines: string[] = [
     `Portfolio brief ${report.date}`,
-    `Last session: ${money(t.dayChange)} (${pct(t.dayChangePercent)}) | Value $${t.totalValue.toFixed(0)} | Total P&L ${money(t.totalPL)} (${pct(t.totalPLPercent)})`,
+    `Today: ${money(t.dayChange)} (${pct(t.dayChangePercent)}) | Value $${t.totalValue.toFixed(0)} | Total P&L ${money(t.totalPL)} (${pct(t.totalPLPercent)})`,
     "",
   ];
   if (narrative) lines.push(narrative, "");

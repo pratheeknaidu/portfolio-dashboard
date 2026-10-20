@@ -75,11 +75,11 @@ Security rules (`firestore.rules`) only allow access where `request.auth.uid == 
 
 ### Morning newsletter (`src/lib/newsletter/`, `src/app/api/cron/newsletter/`)
 
-Vercel Cron (`vercel.json`, `0 12 * * 1-5` UTC ≈ 7–8am ET weekdays) hits `GET /api/cron/newsletter`. This route is the one exception to the `verifyRequest` pattern: it authenticates with `Authorization: Bearer $CRON_SECRET` (Vercel sends this automatically) and refuses to run if `CRON_SECRET` is unset. `?dryRun=1` returns rendered previews without sending.
+Vercel Cron (`vercel.json`, `0 21 * * 1-5` UTC = after the 4pm ET close on weekdays (4–5pm EST / 5–6pm EDT; Hobby cron fires anywhere in the hour)) hits `GET /api/cron/newsletter`. This route is the one exception to the `verifyRequest` pattern: it authenticates with `Authorization: Bearer $CRON_SECRET` (Vercel sends this automatically) and refuses to run if `CRON_SECRET` is unset. `?dryRun=1` returns rendered previews without sending, plus `narrativeError` when the AI briefing is missing.
 
 - Recipients are opt-in via `NEWSLETTER_EMAILS` (comma-separated); each is resolved to a uid with `adminAuth.getUserByEmail`.
 - `buildReport()` is pure and holds all the rules: movers by dollar contribution, P&L by sector, top 1-month sector ETF momentum (SPDR `XL*` + `SPY`), take-profit flags (gain ≥ 25% plus a concrete reason: above analyst target, overvalued, bearish consensus, ≥15% concentration, or ≥100% gain), and bearish big losers.
-- `writeNarrative()` adds a Gemini-written briefing grounded in Google Search when `GEMINI_API_KEY` is set (free tier; model defaults to `gemini-flash-latest`, override with `GEMINI_MODEL`); on any failure it returns null and the email goes out with only the rule-based sections. Model output is escaped and rendered from a tiny markdown subset (`narrativeToHtml`).
+- `writeNarrative()` adds a Gemini-written briefing grounded in Google Search, fed by `privateReport()` (percentages and weights only, no dollar figures) when `GEMINI_API_KEY` is set (free tier; model defaults to `gemini-flash-latest`, override with `GEMINI_MODEL`); on any failure it returns null and the email goes out with only the rule-based sections. Model output is escaped and rendered from a tiny markdown subset (`narrativeToHtml`).
 - Email is sent through Resend (`RESEND_API_KEY`, optional `NEWSLETTER_FROM`; the default `onboarding@resend.dev` sender only delivers to the Resend account owner's address).
 
 ### Tests
